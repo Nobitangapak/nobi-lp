@@ -1,173 +1,113 @@
-<!doctype html><html><head><meta name=viewport content="width=device-width,initial-scale=1"><script src="https://telegram.org/js/telegram-web-app.js"></script><meta charset=utf-8><style>html,body{margin:0;background:#02040a}</style>
-<script src=react.production.min.js></script><script src=react-dom.production.min.js></script><script src=babel.min.js></script></head>
-<body><div id=root></div><script>window.__V={T:0,lp:1,rp:1,title:0};</script>
-<script type="text/babel">
-const {useEffect,useState}=React; const BASE=Date.parse('2026-11-04T06:10:00Z');
-// ===== NOBI_DATA START
-const NOBI_DATA = {
-  updatedWib: 'memuat…',
-  solUsd: 92.79,
-  startSol: 0.309,
-  wallet: { address: 'GMAaqY…ruR6k', solBalance: 0.08556 },
-  pnlToday: { realizedSol: -0.03859, unrealizedSol: -0.0001, closedCount: 2 },
-  positions: [
-    { pool: 'GATO-SOL', pubkey: 'HBfh…bME', opened: '09:17 WIB', depositSol: 0.15, valueSol: 0.19333, pnlSol: -0.0001, pnlPct: -0.05, inRange: true, binsFromEdge: 16, tp: 6, sl: -3 }
-  ],
-  rules: { tp: '+6%', sl: '-3%', maxPerPos: '0.25 SOL', maxPos: 1, reserve: '0.08 SOL', binsBelow: 30, binsAbove: 5 },
-  trades: { closed: 6, wins: 3, losses: 3, netSol: -0.0270 },
-  paper: [
-    { pool: 'AMD-SOL', strat: 'bidask-retrace', since: '11:12', pct: -3.86 },
-    { pool: 'NIO-SOL', strat: 'bidask-retrace', since: '11:12', pct: -1.67 }
-  ],
-  activity: [
-    { t: '13:10', who: 'Exec', msg: 'GATO-SOL dicek: -0,05%, di dalam rentang (16 bin dari tepi)' },
-    { t: '13:10', who: 'Quant', msg: 'Paper AMD-SOL -3,86% · NIO-SOL -1,67% (HOLD)' },
-    { t: '13:05', who: 'Quant', msg: 'Paper HOLD AMD-SOL -3,60% · NIO-SOL -1,67%' },
-    { t: '12:37', who: 'Quant', msg: 'Paper HOLD AMD-SOL -1,48% · NIO-SOL -1,89%' },
-    { t: '11:12', who: 'Scout', msg: 'Paper: buka AMD-SOL & NIO-SOL (bidask-retrace)' },
-    { t: '10:51', who: 'Nobi', msg: 'GATO-SOL di-arm ulang: TP +6% / SL -3%' },
-    { t: '09:17', who: 'Exec', msg: 'Buka GATO-SOL 0,15 SOL (30 bin bawah / 5 atas)' },
-    { t: '09:16', who: 'Nobi', msg: 'Rem harian dimatikan (permintaan Nobita)' },
-    { t: '07:58', who: 'Exec', msg: 'Buka AMD-SOL 0,20 SOL → stop-loss ~-0,022' },
-    { t: '06:53', who: 'Exec', msg: 'FLOAT-SOL 0,22 SOL → stop-loss ~-0,0166' },
-    { t: '06:53', who: 'Exec', msg: 'FLOAT-SOL ditutup +0,0050 (keluar rentang atas)' },
-    { t: '06:30', who: 'Exec', msg: 'AMD-SOL take-profit +0,0232 SOL' },
-    { t: '06:07', who: 'Scout', msg: 'Pool AMD-SOL dipilih, buka 0,20 SOL' }
-  ],
-  agents: [
-    { name: 'Nobi', role: 'Manajer', status: 'live', color: '#22d3ee' },
-    { name: 'Scout', role: 'Pencari Pool', status: 'idle', note: 'maks 1 posisi', color: '#a78bfa' },
-    { name: 'Radar', role: 'Pengecek Risiko', status: 'idle', note: 'RugCheck siaga', color: '#f472b6' },
-    { name: 'Quant', role: 'Analis Fee/Vol', status: 'thinking', note: 'paper trading', color: '#facc15' },
-    { name: 'Exec', role: 'Eksekutor', status: 'live', note: 'pantau GATO-SOL', color: '#4ade80' },
-    { name: 'Reporter', role: 'Pelapor', status: 'sleeping', note: 'lapor tiap :30', color: '#60a5fa' }
-  ]
-};
-// ===== NOBI_DATA END =====
-
-let D = NOBI_DATA; let ERR='';
-const TG=window.Telegram&&Telegram.WebApp; try{TG.ready();TG.expand();}catch(e){}
-const wibT=(ts)=>new Date(ts*1000+7*3600e3).toISOString().slice(11,16);
-function deriveAgents(d){const p=d.positions[0]; const m=new Date(Date.now()+7*3600e3).getUTCMinutes();
- return NOBI_DATA.agents.map(a=>{const x={...a};
-  if(a.name==='Nobi'){x.status='live';x.note='kelola '+(p?p.pool:'mencari pool');}
-  if(a.name==='Scout'){x.status=p?'idle':'thinking';x.note=p?'maks 1 posisi':'cari pool baru';}
-  if(a.name==='Radar'){const near=p&&(p.pnlPct<=-2||!p.inRange||p.binsFromEdge<=3);x.status=near?'checking limits':'idle';x.note=near?'dekat batas!':'aman';}
-  if(a.name==='Quant'){x.status=d.paper.open.length?'thinking':'idle';x.note='paper '+d.paper.open.length+' posisi';}
-  if(a.name==='Exec'){x.status=p?'live':'idle';x.note=p?'pantau '+p.pool:'siaga';}
-  if(a.name==='Reporter'){x.status=(m>=28&&m<=33)?'live':'sleeping';x.note='lapor tiap :30';}
-  return x;});}
-function apply(r){const ps=r.positions.map(p=>({pool:p.pool,pubkey:(p.pubkey||'').slice(0,4)+'…'+(p.pubkey||'').slice(-3),opened:'-',depositSol:p.deposit||0,valueSol:p.value||0,pnlSol:p.pnlSol||0,pnlPct:p.pnlPct||0,inRange:p.inRange!==false,binsFromEdge:p.binsFromEdge??'-',tp:p.tp,sl:p.sl}));
- const cl=r.trades.filter(t=>t.result!=null); const pd=r.pnlDay||{};
- const act=[]; ps.forEach(p=>act.push({t:wibT(r.ts),who:'Exec',msg:p.pool+' '+(p.pnlPct>=0?'+':'')+p.pnlPct.toFixed(2)+'%, '+(p.inRange?'dalam rentang':'LUAR rentang')+' ('+p.binsFromEdge+' bin)'}));
- r.paper.open.forEach(p=>act.push({t:p.since,who:'Quant',msg:'Paper '+p.pool+' '+(p.pct!=null?p.pct.toFixed(2)+'%':'')}));
- r.paper.closed.slice(-4).reverse().forEach(p=>act.push({t:p.exit,who:'Quant',msg:'Paper tutup '+p.pool+' '+(p.pct!=null?p.pct.toFixed(2)+'%':'')+' ('+p.reason+')'}));
- r.trades.slice(-8).reverse().forEach(t=>act.push({t:t.opened,who:'Exec',msg:'#'+t.n+' '+t.pool+' '+t.size+' → '+(t.result!=null?(t.approx?'~':'')+t.result:'jalan')+' '+(t.reason||'')}));
- const d={...NOBI_DATA,updatedWib:'diperbarui '+new Date(r.ts*1000+7*3600e3).toISOString().slice(11,19)+' WIB',solUsd:r.solPrice||NOBI_DATA.solUsd,startSol:r.startSol,
-  wallet:{address:'GMAaqY…ruR6k',solBalance:r.walletSol||0},pnlToday:{realizedSol:pd.realizedSol||0,unrealizedSol:pd.unrealizedSol||0},
-  positions:ps,trades:{closed:r.closed,wins:r.wins,losses:r.closed-r.wins,netSol:cl.reduce((a,t)=>a+t.result,0)},
-  paper:r.paper.open.map(p=>({pool:p.pool,since:p.since,pct:p.pct||0})),activity:act.length?act:NOBI_DATA.activity};
- d.agents=deriveAgents({...d,paper:r.paper}); D=d;}
-async function load(){const t=Date.now();let r=null;
- for(const u of['https://raw.githubusercontent.com/Nobitangapak/nobi-lp/main/data.json?t='+t,'./data.json?t='+t]){try{const res=await fetch(u,{cache:'no-store'});if(res.ok){r=await res.json();break;}}catch(e){}}
- if(r){apply(r);const age=Date.now()/1000-r.ts;ERR=age>300?'⚠ Data lama ('+Math.round(age/60)+' menit) – loop update mungkin berhenti':'';}else ERR='Gagal memuat data';
- window.__force&&window.__force();}
-load(); setInterval(load,30000); setInterval(()=>window.__force&&window.__force(),1000);
-const fmt = (n, d = 4) => n.toFixed(d).replace('.', ',');
-const stColor = { live: '#4ade80', thinking: '#facc15', idle: '#94a3b8', sleeping: '#60a5fa', 'checking limits': '#f97316', 'cycle done': '#22d3ee' };
-const css = `
-@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-6px)}}
-@keyframes pulse{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}}
-@keyframes dash{to{stroke-dashoffset:-40}}
-@keyframes spin{to{transform:translate(-50%,-50%) rotateX(62deg) rotateZ(360deg)}}
-@keyframes flash{0%{background:rgba(74,222,128,.25)}100%{background:transparent}}
-@keyframes scroll{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
-.nb *{box-sizing:border-box}
-.nb button{cursor:pointer}
-`;
-
-function Panel({ title, children }) {
-  return <div style={{ border: '1px solid rgba(34,211,238,.35)', borderRadius: 10, background: 'rgba(8,15,35,.85)', padding: 10, marginBottom: 10, boxShadow: '0 0 14px rgba(34,211,238,.12)' }}>
-    <div style={{ fontSize: 10, letterSpacing: 2, color: '#22d3ee', marginBottom: 6 }}>{title}</div>{children}</div>;
-}
-const Row = ({ k, v, c }) => <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '2px 0' }}><span style={{ color: '#94a3b8' }}>{k}</span><span style={{ color: c || '#e2e8f0', fontFamily: 'monospace' }}>{v}</span></div>;
-
-function useNow() { return new Date(); }
-function countdown(now, h) {
-  const wib = new Date(now.getTime() + 7 * 3600e3); const sec = wib.getUTCHours() * 3600 + wib.getUTCMinutes() * 60 + wib.getUTCSeconds();
-  const left = h * 3600 - (sec % (h * 3600)); const p = (x) => String(x).padStart(2, '0');
-  return `${p(Math.floor(left / 3600))}:${p(Math.floor(left % 3600 / 60))}:${p(left % 60)}`;
-}
-
-function App() {
-  const V = window.__V; const [, force] = useState(0); window.__force = () => force(x => x + 1);
-  const now = useNow();
-  const [left, setLeft] = useState(0);
-  const [right, setRight] = useState(0);
-  const [tab, setTab] = useState('LIVE');
-  const [w, setW] = useState(900);
-  useEffect(() => { const f = () => setW(window.innerWidth); f(); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
-  const mobile = w < 820;
-  const posVal = D.positions.reduce((a, p) => a + p.valueSol, 0);
-  const total = D.wallet.solBalance + posVal;
-  const vsStart = (total / D.startSol - 1) * 100;
-  const n = D.agents.length;
-  const R = mobile ? 38 : 40;
-
-  const leftPanel = <div>
-    <Panel title="STATUS TIM">{D.agents.map(a => <Row key={a.name} k={a.name + ' · ' + a.role} v={a.status.toUpperCase()} c={stColor[a.status]} />)}</Panel>
-    <Panel title="CANDLE BERIKUTNYA">{[1, 4, 12, 24].map(h => <Row key={h} k={h + 'j'} v={countdown(now, h)} c="#22d3ee" />)}</Panel>
-    <Panel title="POSISI">{D.positions.map(p => <div key={p.pubkey}><Row k="Pool" v={p.pool} /><Row k="Ukuran" v={fmt(p.depositSol, 2) + ' SOL'} /><Row k="Nilai" v={fmt(p.valueSol) + ' SOL'} /><Row k="PnL" v={(p.pnlPct >= 0 ? '+' : '') + fmt(p.pnlPct, 2) + '%'} c={p.pnlPct >= 0 ? '#4ade80' : '#f87171'} /><Row k="Masuk" v={p.opened} /></div>)}</Panel>
-    <Panel title="SETUP TIM"><Row k="Take profit" v={D.rules.tp} c="#4ade80" /><Row k="Stop loss" v={D.rules.sl} c="#f87171" /><Row k="Maks/posisi" v={D.rules.maxPerPos} /><Row k="Jumlah posisi" v={D.rules.maxPos} /><Row k="Cadangan" v={D.rules.reserve} /><Row k="Bins" v={D.rules.binsBelow + ' bawah / ' + D.rules.binsAbove + ' atas'} /><Row k="Modal awal" v={fmt(D.startSol, 3) + ' SOL'} /><Row k="Wallet" v={D.wallet.address} /></Panel>
-  </div>;
-  const rightPanel = <div>
-    <Panel title="POSISI LP">{D.positions.map(p => <div key={p.pubkey} style={{ animation: 'flash 2s' }}><div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}><span>{p.pool}</span><span style={{ color: p.inRange ? '#4ade80' : '#f87171', fontSize: 11 }}>{p.inRange ? '● DALAM RENTANG' : '● LUAR RENTANG'}</span></div><Row k="Jarak ke tepi" v={p.binsFromEdge + ' bin'} /><Row k="TP / SL" v={'+' + p.tp + '% / ' + p.sl + '%'} /><Row k="PnL" v={fmt(p.pnlSol, 4) + ' SOL'} c={p.pnlSol >= 0 ? '#4ade80' : '#f87171'} /></div>)}</Panel>
-    <Panel title="PAPER TRADING (SIMULASI)">{D.paper.map(p => <Row key={p.pool} k={p.pool + ' · sejak ' + p.since} v={fmt(p.pct, 2) + '%'} c={p.pct >= 0 ? '#4ade80' : '#f87171'} />)}</Panel>
-    <Panel title="AKTIVITAS"><div style={{ height: 260, overflow: 'hidden', fontSize: 11, fontFamily: 'monospace' }}><div style={{ animation: `scroll ${D.activity.length * 4}s linear infinite` }}>{[...D.activity, ...D.activity].map((a, i) => { const ag = D.agents.find(x => x.name === a.who); return <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid rgba(148,163,184,.12)' }}><span style={{ color: '#64748b' }}>{a.t}</span> - <span style={{ color: ag?.color }}>{a.who}</span>: {a.msg}</div>; })}</div></div></Panel>
-  </div>;
-
-  const drawer = (open, side, content, close) => <div style={{ position: 'fixed', top: 0, bottom: 0, [side]: 0, width: 'min(86vw,320px)', zIndex: 95, background: '#050b1c', borderLeft: side === 'right' ? '1px solid #164e63' : undefined, borderRight: side === 'left' ? '1px solid #164e63' : undefined, padding: 12, overflowY: 'auto', transform: `translateX(${(side === 'left' ? -1 : 1) * (1 - open) * 105}%)`, boxShadow: open > 0 ? '0 0 40px rgba(34,211,238,.25)' : 'none' }}><button onClick={close} style={{ float: 'right', background: 'none', border: '1px solid #22d3ee', color: '#22d3ee', borderRadius: 6, padding: '2px 8px' }}>✕</button><div style={{ clear: 'both', height: 6 }} />{content}</div>;
-
-  return <div className="nb" style={{ background: 'radial-gradient(ellipse at 50% 40%,#0b1e46 0%,#050914 60%,#02040a 100%)', color: '#e2e8f0', minHeight: '100vh', fontFamily: 'Inter,system-ui,sans-serif', overflow: 'hidden', position: 'relative' }}>
-    <style>{css}</style>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderBottom: '1px solid rgba(34,211,238,.3)', flexWrap: 'wrap', background: 'rgba(2,6,23,.7)' }}>
-      <div style={{ fontWeight: 900, letterSpacing: 4, color: '#22d3ee', textShadow: '0 0 10px #22d3ee' }}>◆ NOBI</div>
-      <div style={{ display: 'flex', gap: 4 }}>{['LIVE', 'METEORA LP', 'SYRA'].map(t => <button key={t} onClick={() => setTab(t)} style={{ fontSize: 10, padding: '4px 8px', borderRadius: 6, border: '1px solid ' + (tab === t ? '#22d3ee' : '#334155'), background: tab === t ? 'rgba(34,211,238,.15)' : 'transparent', color: tab === t ? '#22d3ee' : '#94a3b8' }}>{t === 'LIVE' ? '● ' : ''}{t}</button>)}</div>
-      <div style={{ marginLeft: 'auto', textAlign: 'right' }}><div style={{ fontSize: 10, color: '#94a3b8' }}>TOTAL ASET</div><div style={{ fontWeight: 800, fontFamily: 'monospace' }}>{fmt(total)} SOL <span style={{ color: '#94a3b8', fontWeight: 400 }}>≈ ${(total * D.solUsd).toFixed(2)}</span> <span style={{ color: vsStart >= 0 ? '#4ade80' : '#f87171', fontSize: 12 }}>{vsStart >= 0 ? '+' : ''}{vsStart.toFixed(1).replace('.', ',')}%</span></div></div>
-    </div>
-    <div style={{ display: 'flex', gap: 8, padding: '6px 12px', fontSize: 11, color: '#94a3b8', flexWrap: 'wrap' }}>
-      <span>SOL ${D.solUsd.toFixed(2)}</span><span>· Trade {D.trades.closed} ({D.trades.wins}M/{D.trades.losses}K) net {fmt(D.trades.netSol, 3)} SOL</span><span>· Data: {D.updatedWib}</span>
-      {mobile && <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}><button onClick={() => setLeft(true)} style={{ fontSize: 11, background: 'rgba(34,211,238,.12)', border: '1px solid #22d3ee', color: '#22d3ee', borderRadius: 6, padding: '3px 8px' }}>☰ Tim</button><button onClick={() => setRight(true)} style={{ fontSize: 11, background: 'rgba(167,139,250,.12)', border: '1px solid #a78bfa', color: '#a78bfa', borderRadius: 6, padding: '3px 8px' }}>Aktivitas ▸</button></span>}
-    </div>
-    <div style={{ display: 'flex', gap: 10, padding: '0 12px 12px' }}>
-      {!mobile && <div style={{ width: 250, flexShrink: 0, transform: `translateX(${(1 - V.lp) * -110}%)`, opacity: V.lp }}>{leftPanel}</div>}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>{[[D.positions[0]?D.positions[0].pool:'Posisi', D.positions[0] ? fmt(D.positions[0].pnlPct, 2) + '%' : '-'], ['Wallet', fmt(D.wallet.solBalance) + ' SOL'], ['PnL hari ini', fmt(D.pnlToday.realizedSol + D.pnlToday.unrealizedSol, 4)]].map(([k, v]) => <div key={k} style={{ flex: 1, border: '1px solid rgba(167,139,250,.35)', borderRadius: 8, padding: '6px 8px', background: 'linear-gradient(180deg,rgba(76,29,149,.25),rgba(8,15,35,.6))', transform: 'perspective(400px) rotateX(8deg)' }}><div style={{ fontSize: 9, color: '#a78bfa' }}>{k}</div><div style={{ fontFamily: 'monospace', fontSize: 13, color: String(v).startsWith('-') ? '#f87171' : '#4ade80' }}>{v}</div></div>)}</div>
-        <div style={{ position: 'relative', width: '100%', aspectRatio: mobile ? '1/1' : '16/10', maxHeight: 560 }}>
-          <div style={{ position: 'absolute', left: '50%', top: '55%', width: '86%', aspectRatio: '1/1', border: '2px solid rgba(34,211,238,.35)', borderRadius: '50%', boxShadow: '0 0 40px rgba(34,211,238,.25), inset 0 0 60px rgba(34,211,238,.15)', animation: 'spin 40s linear infinite', backgroundImage: 'repeating-radial-gradient(circle,rgba(34,211,238,.08) 0 2px,transparent 2px 30px)' }} />
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>{D.agents.map((a, i) => { const ang = (i / n) * Math.PI * 2 - Math.PI / 2; const x = 50 + Math.cos(ang) * R; const y = 55 + Math.sin(ang) * R * 0.5; return <line key={a.name} x1={x} y1={y} x2={50} y2={55} stroke={a.color} strokeWidth={a.status === 'live' ? 0.6 : 0.25} strokeDasharray="2 3" opacity={a.status === 'live' || a.status === 'thinking' ? 0.9 : 0.35} style={{ animation: `dash ${a.status === 'live' ? 1.5 : 4}s linear infinite` }} />; })}</svg>
-          <div style={{ position: 'absolute', left: '50%', top: '55%', width: 70, height: 70, borderRadius: '50%', background: 'radial-gradient(circle,#a5f3fc 0%,#22d3ee 35%,rgba(34,211,238,0) 70%)', animation: 'pulse 2.5s ease-in-out infinite', boxShadow: '0 0 50px #22d3ee' }} />
-          <div style={{ position: 'absolute', left: '50%', top: '55%', transform: 'translate(-50%,40px)', fontSize: 9, color: '#67e8f9', letterSpacing: 2, whiteSpace: 'nowrap' }}>CORE · SYRA LP</div>
-          {D.agents.map((a, i) => { const ang = (i / n) * Math.PI * 2 - Math.PI / 2; const x = 50 + Math.cos(ang) * R; const y = 55 + Math.sin(ang) * R * 0.5; const sc = 0.8 + (y - 35) / 100; return <div key={a.name} style={{ position: 'absolute', left: x + '%', top: y + '%', zIndex: Math.round(y), transform: `translate(-50%,-80%) scale(${sc})` }}>
-            <div style={{ position: 'absolute', left: '50%', bottom: '100%', marginBottom: 4, animation: `bob ${3 + i * 0.3}s ease-in-out infinite`, background: 'rgba(5,11,28,.8)', border: '1px solid ' + a.color, borderRadius: 6, padding: '3px 6px', whiteSpace: 'nowrap', boxShadow: '0 0 10px ' + a.color + '55', textAlign: 'center' }}><div style={{ fontSize: 11, fontWeight: 800, color: a.color }}>{a.name}</div><div style={{ fontSize: 8, color: '#cbd5e1' }}>{a.role}</div><div style={{ fontSize: 8, color: stColor[a.status] }}>● {a.status}{a.note ? ' · ' + a.note : ''}</div></div>
-            <svg width="44" height="56" viewBox="0 0 44 56"><ellipse cx="22" cy="52" rx="18" ry="4" fill={a.color} opacity=".35" /><rect x="12" y="20" width="20" height="26" rx="7" fill="#0f172a" stroke={a.color} strokeWidth="1.5" /><circle cx="22" cy="12" r="8" fill="#0f172a" stroke={a.color} strokeWidth="1.5" /><rect x="16" y="10" width="12" height="3" rx="1.5" fill={a.color} opacity={a.status === 'sleeping' ? .3 : 1} /><rect x="2" y="36" width="40" height="6" rx="2" fill={a.color} opacity=".5" /></svg>
-          </div>; })}
-        </div>
-      </div>
-      {!mobile && <div style={{ width: 280, flexShrink: 0, transform: `translateX(${(1 - V.rp) * 110}%)`, opacity: V.rp }}>{rightPanel}</div>}
-    </div>
-    {mobile && drawer(left, 'left', leftPanel, () => setLeft(false))}
-    {mobile && drawer(right, 'right', rightPanel, () => setRight(false))}
-    <div style={{ position: 'fixed', inset: 0, zIndex: 100, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: mobile ? 'flex-end' : 'center', paddingBottom: mobile ? '18vh' : 0, opacity: V.title, background: `rgba(2,4,10,${0.55 * V.title})` }}>
-      <div style={{ transform: `translateY(${(1 - V.title) * 30}px)`, textAlign: 'center' }}>
-        <div style={{ fontSize: mobile ? 44 : 64, fontWeight: 900, letterSpacing: 8, color: '#22d3ee', textShadow: '0 0 24px #22d3ee' }}>◆ NOBI</div>
-        <div style={{ fontSize: mobile ? 20 : 28, fontWeight: 700, color: '#e2e8f0', marginTop: 8 }}>AI Agent LP di Solana</div>
-        <div style={{ fontSize: mobile ? 12 : 15, color: '#a78bfa', marginTop: 10, letterSpacing: 2 }}>METEORA DLMM · SYRA LP · 6 AGEN</div>
-      </div>
-    </div>
-    <div style={{ textAlign: 'center', fontSize: 10, color: '#475569', padding: 8 }}>{ERR||'Data asli Syra (read-only) · update tiap ~60 detik'} · bukan nasihat keuangan</div>
-  </div>;
-}
-
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+<!doctype html><html lang=id><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nobi LP • Ruang Komando</title><script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#05060f;--c:#22d3ee;--p:#a855f7;--g:#22c55e;--r:#f43f5e;--y:#facc15;--t:#e6f1ff;--m:#8a9bb8;--gl:rgba(255,255,255,.055);--bd:rgba(255,255,255,.1)}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--t);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{padding:calc(10px + env(safe-area-inset-top)) 12px calc(20px + env(safe-area-inset-bottom));min-height:100vh;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:-30%;z-index:-1;background:radial-gradient(circle at 20% 20%,rgba(168,85,247,.28),transparent 40%),radial-gradient(circle at 80% 30%,rgba(34,211,238,.22),transparent 40%),radial-gradient(circle at 50% 90%,rgba(34,197,94,.15),transparent 40%);animation:drift 18s ease-in-out infinite alternate}
+body:after{content:"";position:fixed;inset:0;z-index:-1;background-image:linear-gradient(rgba(34,211,238,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.05) 1px,transparent 1px);background-size:28px 28px;mask:linear-gradient(#000,transparent 70%)}
+@keyframes drift{to{transform:translate(4%,-3%) rotate(8deg)}}
+.wrap{max-width:430px;margin:auto;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--gl);border:1px solid var(--bd);border-radius:18px;padding:14px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 8px 30px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);animation:up .6s both}
+@keyframes up{from{opacity:0;transform:translateY(14px)}}
+h2{margin:0 0 10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--m);display:flex;justify-content:space-between;align-items:center}
+.hdr{display:flex;align-items:center;justify-content:space-between}
+.logo{font-weight:800;font-size:19px;background:linear-gradient(90deg,var(--c),var(--p));-webkit-background-clip:text;color:transparent}
+.sub{color:var(--m);font-size:12px}
+.live{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12px;padding:5px 10px;border-radius:99px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:var(--g)}
+.live i{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor;animation:pulse 1.4s infinite}
+.live.stale{color:var(--y);background:rgba(250,204,21,.12);border-color:rgba(250,204,21,.4)}
+@keyframes pulse{50%{opacity:.3;transform:scale(.7)}}
+.warn{display:none;background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.4);color:var(--y);padding:8px 12px;border-radius:12px;font-size:12px}
+.big{font-size:30px;font-weight:800;letter-spacing:-.02em}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pos{color:var(--g)}.neg{color:var(--r)}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.kp div{background:rgba(255,255,255,.04);border-radius:12px;padding:8px;text-align:center}.kp b{display:block;font-size:15px}.kp span{font-size:11px;color:var(--m)}
+.agents{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ag{position:relative;border-radius:14px;padding:10px 6px;text-align:center;background:rgba(255,255,255,.04);border:1px solid var(--bd);overflow:hidden}
+.ag:before{content:"";position:absolute;inset:-50%;background:conic-gradient(from 0deg,transparent 0 70%,var(--a) 85%,transparent 100%);animation:spin 4s linear infinite;opacity:.55}
+.ag:after{content:"";position:absolute;inset:1px;border-radius:13px;background:#0a0d1c}
+.ag>*{position:relative;z-index:1}@keyframes spin{to{transform:rotate(360deg)}}
+.av{width:38px;height:38px;margin:0 auto 6px;border-radius:50%;display:grid;place-items:center;font-size:19px;background:radial-gradient(circle,var(--a),transparent 70%);box-shadow:0 0 18px var(--a);animation:breathe 2.6s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:0 0 4px var(--a);transform:scale(.94)}}
+.ag b{font-size:13px}.ag small{display:block;font-size:10px;color:var(--m)}
+.st{display:inline-flex;align-items:center;gap:4px;font-size:10px;margin-top:4px;color:var(--a)}.st i{width:6px;height:6px;border-radius:50%;background:var(--a);animation:pulse 1.2s infinite}
+.gauge{display:flex;gap:14px;align-items:center}
+.ring{position:relative;width:150px;height:150px;flex:none}.ring svg{transform:rotate(-90deg)}
+.ring .ctr{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.ring .ctr b{font-size:26px;font-weight:800}.ring .ctr span{font-size:11px;color:var(--m);display:block}
+.arc{transition:stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)}
+.meter{position:relative;height:10px;border-radius:99px;background:linear-gradient(90deg,var(--r),#334155 33%,#334155 34%,var(--g));margin:18px 0 6px}
+.meter .pin{position:absolute;top:-5px;width:4px;height:20px;border-radius:3px;background:#fff;box-shadow:0 0 12px #fff;transition:left 1s}
+.meter .z{position:absolute;top:-4px;width:2px;height:18px;background:rgba(255,255,255,.5)}
+.lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--m)}
+.range{height:14px;border-radius:99px;background:rgba(255,255,255,.07);position:relative;overflow:hidden;margin:8px 0 4px}
+.range>i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--p),var(--c));border-radius:99px;transition:width 1s}
+.range>i:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:shine 2.2s infinite;transform:translateX(-100%)}
+@keyframes shine{to{transform:translateX(100%)}}
+.tag{font-size:11px;padding:3px 8px;border-radius:99px;background:rgba(34,211,238,.12);color:var(--c);border:1px solid rgba(34,211,238,.3)}
+.tag.bad{background:rgba(244,63,94,.12);color:var(--r);border-color:rgba(244,63,94,.35)}
+.feed{height:150px;overflow:hidden;position:relative;font:12px/1.5 ui-monospace,Menlo,monospace;mask:linear-gradient(transparent,#000 15%,#000 85%,transparent)}
+.feed div{padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.06);animation:up .4s both}.feed em{font-style:normal;color:var(--c)}
+.cur{display:inline-block;width:7px;height:13px;background:var(--c);vertical-align:-2px;animation:pulse 1s infinite}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:11px;padding:5px 9px;border-radius:10px;border:1px solid;font-weight:600}
+.chip.w{color:var(--g);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.1)}
+.chip.l{color:var(--r);border-color:rgba(244,63,94,.4);background:rgba(244,63,94,.1)}
+.chip.o{color:var(--y);border-color:rgba(250,204,21,.4);background:rgba(250,204,21,.1);animation:pulse 2s infinite}
+.pp{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px}
+.foot{text-align:center;color:var(--m);font-size:11px}
+</style></head><body><div class=wrap>
+<div class=hdr><div><div class=logo>⚡ NOBI LP COMMAND</div><div class=sub>Ruang komando agen AI • Meteora DLMM</div></div><div id=live class=live><i></i><span>LIVE</span></div></div>
+<div id=warn class=warn>⚠️ Data belum diperbarui lebih dari 5 menit. Tunggu sebentar…</div>
+<div class=card><h2>Total Aset <span id=upd class=sub></span></h2>
+<div class=row><div><div class=big id=eq>–</div><div id=chg class=sub></div></div><svg id=spark width=130 height=48></svg></div>
+<div class=kp><div><b id=wal>–</b><span>Di wallet</span></div><div><b id=day>–</b><span>Hasil hari ini</span></div><div><b id=wr>–</b><span>Menang</span></div></div></div>
+<div class=card><h2>Tim Agen <span class=tag>6 aktif</span></h2><div class=agents id=agents></div></div>
+<div class=card id=poscard><h2>Posisi Terbuka <span id=ptag class=tag></span></h2><div id=pos></div></div>
+<div class=card><h2>Aktivitas Langsung</h2><div class=feed id=feed></div></div>
+<div class=card><h2>Riwayat Trade <span id=wl class=sub></span></h2><div class=chips id=trades></div></div>
+<div class=card><h2>Latihan (Simulasi) <span class=tag>tanpa uang asli</span></h2><div id=paper></div></div>
+<div class=card><h2>Aturan Main</h2><div id=rules class=chips></div></div>
+<div class=foot>Wallet <span id=ws></span> • diperbarui otomatis tiap 30 detik</div>
+</div>
+<script>
+const tg=window.Telegram&&Telegram.WebApp;try{tg.ready();tg.expand();tg.setHeaderColor&&tg.setHeaderColor('#05060f');tg.setBackgroundColor&&tg.setBackgroundColor('#05060f')}catch(e){}
+const $=id=>document.getElementById(id),f=(n,d=4)=>(n==null||isNaN(n))?'–':(+n).toFixed(d),sg=n=>(n>0?'+':'')+f(n,4),cls=n=>n>=0?'pos':'neg';
+const wib=ts=>new Date(ts*1000).toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta',hour:'2-digit',minute:'2-digit'})+' WIB';
+let D=null,feedQ=[],shown=new Set();
+function agents(d){const p=d.positions&&d.positions[0];const A=[['Nobi','Komandan','🧠','#a855f7','Memimpin tim'],['Scout','Cari pool','🔭','#22d3ee','Memindai pool'],['Radar','Pantau risiko','📡','#facc15',p?(p.inRange?'Aman, in range':'Keluar range!'):'Siaga'],['Quant','Hitung untung','📊','#3b82f6',p?('PnL '+f(p.pnlPct,1)+'%'):'Menunggu'],['Exec','Eksekusi','⚙️','#22c55e',p?'Jaga posisi':'Siap buka'],['Reporter','Lapor','📝','#f472b6','Laporan tiap jam']];
+$('agents').innerHTML=A.map(a=>`<div class=ag style="--a:${a[3]}"><div class=av>${a[2]}</div><b>${a[0]}</b><small>${a[1]}</small><div class=st><i></i>${a[4]}</div></div>`).join('')}
+function spark(d){let h=JSON.parse(localStorage.nobiEq||'[]');if(!h.length||h[h.length-1][0]!==d.ts)h.push([d.ts,d.equitySol]);h=h.slice(-120);localStorage.nobiEq=JSON.stringify(h);
+const v=[d.startSol,...h.map(x=>x[1])],mn=Math.min(...v),mx=Math.max(...v),W=130,H=48,s=(mx-mn)||1e-6,pts=v.map((y,i)=>[i*W/Math.max(v.length-1,1),H-4-(y-mn)/s*(H-8)]);
+const c=d.equitySol>=d.startSol?'#22c55e':'#f43f5e',l=pts.map(p=>p.join(',')).join(' ');
+$('spark').innerHTML=`<defs><linearGradient id=sg x1=0 y1=0 x2=0 y2=1><stop offset=0 stop-color="${c}" stop-opacity=.5 /><stop offset=1 stop-color="${c}" stop-opacity=0 /></linearGradient></defs><polygon points="0,${H} ${l} ${W},${H}" fill="url(#sg)"/><polyline points="${l}" fill=none stroke="${c}" stroke-width=2 style="filter:drop-shadow(0 0 4px ${c})"/><circle cx="${pts[pts.length-1][0]}" cy="${pts[pts.length-1][1]}" r=3 fill="${c}"/>`}
+function pos(d){const p=d.positions&&d.positions[0];if(!p){$('ptag').textContent='kosong';$('pos').innerHTML='<div class=sub>Belum ada posisi. Scout sedang mencari pool terbaik…</div>';return}
+const tp=p.tp??d.rules.tp,sl=p.sl??d.rules.sl,pc=p.pnlPct||0,R=62,C=2*Math.PI*R,fr=Math.min(Math.abs(pc)/(pc>=0?tp:-sl),1),col=pc>=0?'#22c55e':'#f43f5e';
+$('ptag').textContent=p.inRange?'✓ in range':'⚠ out of range';$('ptag').className='tag'+(p.inRange?'':' bad');
+const pin=Math.max(0,Math.min(100,(pc-sl)/(tp-sl)*100)),z=(-sl)/(tp-sl)*100,bins=p.binsFromEdge??0,tot=(d.rules.binsBelow||30)+(d.rules.binsAbove||5);
+$('pos').innerHTML=`<div class=gauge><div class=ring><svg width=150 height=150><circle cx=75 cy=75 r=${R} stroke="rgba(255,255,255,.08)" stroke-width=12 fill=none /><circle class=arc id=arc cx=75 cy=75 r=${R} stroke="${col}" stroke-width=12 fill=none stroke-linecap=round stroke-dasharray="${C}" stroke-dashoffset="${C}" style="filter:drop-shadow(0 0 8px ${col})"/></svg><div class=ctr><div><b class=${cls(pc)}>${pc>0?'+':''}${f(pc,2)}%</b><span>menuju ${pc>=0?'TP +'+tp:'SL '+sl}%</span></div></div></div>
+<div><div style="font-size:18px;font-weight:800">${p.pool}</div><div class=sub>Modal ${f(p.deposit,3)} SOL</div><div class=sub>Nilai ${f(p.value,4)} SOL</div><div class="${cls(p.pnlSol)}" style="font-weight:700;margin-top:4px">${sg(p.pnlSol)} SOL</div><div class=sub>≈ $${f(p.pnlSol*d.solPrice,2)}</div></div></div>
+<div class=meter><div class=z style="left:${z}%"></div><div class=pin style="left:calc(${pin}% - 2px)"></div></div><div class=lbl><span>SL ${sl}%</span><span>0</span><span>TP +${tp}%</span></div>
+<div class=lbl style="margin-top:12px"><span>Jarak dari batas range</span><b style="color:var(--c)">${bins} bin</b></div><div class=range><i style="width:${Math.min(100,bins/tot*100*2)}%"></i></div>
+<div class=sub>${p.inRange?'Harga masih di dalam rentang, posisi menghasilkan fee.':'Harga keluar rentang '+(p.oorSide||'')+'.'}</div>`;
+requestAnimationFrame(()=>setTimeout(()=>{$('arc').style.strokeDashoffset=C*(1-fr)},60))}
+function feed(d){const p=d.positions&&d.positions[0],t=wib(d.ts),m=[['Radar',p?`${p.pool} ${p.inRange?'in range':'out of range'}, ${p.binsFromEdge} bin dari batas`:'Tidak ada posisi']],
+q=[['Quant',p?`PnL ${p.pnlPct>0?'+':''}${f(p.pnlPct,2)}% (${sg(p.pnlSol)} SOL)`:'Menunggu posisi'],['Nobi',`Total aset ${f(d.equitySol,4)} SOL, SOL $${f(d.solPrice,2)}`],['Scout','Memindai pool baru sesuai filter'],['Exec',`Auto-exit aktif: TP +${d.rules.tp}% / SL ${d.rules.sl}%`],['Reporter','Data dikirim ke dasbor']];
+[...m,...q].forEach(x=>{const k=d.ts+x[0];if(!shown.has(k)){shown.add(k);feedQ.push([t,...x])}})}
+setInterval(()=>{if(!feedQ.length)return;const x=feedQ.shift(),el=$('feed'),div=document.createElement('div');div.innerHTML=`<span class=sub>${x[0].slice(0,5)}</span> <em>${x[1]}</em> `;el.prepend(div);
+let i=0,s=x[2],sp=document.createElement('span'),c=document.createElement('span');c.className='cur';div.append(sp,c);const ty=setInterval(()=>{sp.textContent=s.slice(0,++i);if(i>=s.length){clearInterval(ty);c.remove()}},22);while(el.children.length>12)el.lastChild.remove()},1300);
+function render(d){D=d;const ch=d.equitySol-d.startSol,pc=ch/d.startSol*100;
+$('eq').innerHTML=`${f(d.equitySol,4)} <span style="font-size:15px;color:var(--m)">SOL</span>`;$('chg').innerHTML=`<span class=${cls(ch)}>${sg(ch)} SOL (${pc>0?'+':''}${f(pc,1)}%)</span> dari modal ${d.startSol} • ≈ $${f(d.equityUsd,2)}`;
+$('wal').textContent=f(d.walletSol,3);const dt=d.pnlDay&&d.pnlDay.totalSol;$('day').textContent=sg(dt);$('day').className=cls(dt);$('wr').textContent=`${d.wins}/${d.closed}`;
+$('ws').textContent=d.walletShort||'';agents(d);spark(d);pos(d);feed(d);
+$('trades').innerHTML=(d.trades||[]).slice().reverse().map(t=>t.result==null?`<span class="chip o">#${t.n} ${t.pool.split(' ')[0]} • berjalan</span>`:`<span class="chip ${t.result>=0?'w':'l'}">#${t.n} ${t.pool.split(' ')[0]} ${t.result>0?'+':''}${t.result}</span>`).join('');
+$('wl').textContent=`${d.wins} menang • ${d.closed-d.wins} kalah`;
+const pp=d.paper||{};$('paper').innerHTML=(pp.open||[]).map(o=>`<div class=pp><span>🟡 ${o.pool} <span class=sub>sejak ${o.since}</span></span><b class=${cls(o.pct)}>${f(o.pct,2)}%</b></div>`).join('')+(pp.closed||[]).slice(-4).reverse().map(o=>`<div class=pp><span>${o.pct>=0?'🟢':'🔴'} ${o.pool} <span class=sub>${o.exit}</span></span><b class=${cls(o.pct)}>${f(o.pct,2)}%</b></div>`).join('')+`<div class=sub style="margin-top:6px">Selesai: ${pp.closedCount||0} • menang ${pp.wins||0}</div>`;
+const r=d.rules||{};$('rules').innerHTML=[`🎯 TP +${r.tp}%`,`🛡️ SL ${r.sl}%`,`💰 Maks ${r.maxSol} SOL`,`🔒 Cadangan ${r.reserveSol} SOL`,`📏 ${r.binsBelow} bin bawah / ${r.binsAbove} atas`,`💡 ${r.principle||''}`].map(x=>`<span class="chip w" style="color:var(--t)">${x}</span>`).join('');tick()}
+function tick(){if(!D)return;const age=Date.now()/1000-D.ts,st=age>300;$('live').className='live'+(st?' stale':'');$('live').querySelector('span').textContent=st?'TERTUNDA':'LIVE';$('warn').style.display=st?'block':'none';
+$('upd').textContent='update '+wib(D.ts)+' ('+(age<60?Math.max(0,age|0)+' dtk':(age/60|0)+' mnt')+' lalu)'}
+async function load(){const t=Date.now();for(const u of['https://raw.githubusercontent.com/Nobitangapak/nobi-lp/main/data.json?t='+t,'./data.json?t='+t]){try{const r=await fetch(u,{cache:'no-store'});if(r.ok){render(await r.json());return}}catch(e){}}}
+load();setInterval(load,30000);setInterval(tick,1000);
 </script></body></html>
