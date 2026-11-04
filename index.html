@@ -1,0 +1,173 @@
+<!doctype html><html><head><meta name=viewport content="width=device-width,initial-scale=1"><script src="https://telegram.org/js/telegram-web-app.js"></script><meta charset=utf-8><style>html,body{margin:0;background:#02040a}</style>
+<script src=react.production.min.js></script><script src=react-dom.production.min.js></script><script src=babel.min.js></script></head>
+<body><div id=root></div><script>window.__V={T:0,lp:1,rp:1,title:0};</script>
+<script type="text/babel">
+const {useEffect,useState}=React; const BASE=Date.parse('2026-11-04T06:10:00Z');
+// ===== NOBI_DATA START
+const NOBI_DATA = {
+  updatedWib: 'memuat…',
+  solUsd: 92.79,
+  startSol: 0.309,
+  wallet: { address: 'GMAaqY…ruR6k', solBalance: 0.08556 },
+  pnlToday: { realizedSol: -0.03859, unrealizedSol: -0.0001, closedCount: 2 },
+  positions: [
+    { pool: 'GATO-SOL', pubkey: 'HBfh…bME', opened: '09:17 WIB', depositSol: 0.15, valueSol: 0.19333, pnlSol: -0.0001, pnlPct: -0.05, inRange: true, binsFromEdge: 16, tp: 6, sl: -3 }
+  ],
+  rules: { tp: '+6%', sl: '-3%', maxPerPos: '0.25 SOL', maxPos: 1, reserve: '0.08 SOL', binsBelow: 30, binsAbove: 5 },
+  trades: { closed: 6, wins: 3, losses: 3, netSol: -0.0270 },
+  paper: [
+    { pool: 'AMD-SOL', strat: 'bidask-retrace', since: '11:12', pct: -3.86 },
+    { pool: 'NIO-SOL', strat: 'bidask-retrace', since: '11:12', pct: -1.67 }
+  ],
+  activity: [
+    { t: '13:10', who: 'Exec', msg: 'GATO-SOL dicek: -0,05%, di dalam rentang (16 bin dari tepi)' },
+    { t: '13:10', who: 'Quant', msg: 'Paper AMD-SOL -3,86% · NIO-SOL -1,67% (HOLD)' },
+    { t: '13:05', who: 'Quant', msg: 'Paper HOLD AMD-SOL -3,60% · NIO-SOL -1,67%' },
+    { t: '12:37', who: 'Quant', msg: 'Paper HOLD AMD-SOL -1,48% · NIO-SOL -1,89%' },
+    { t: '11:12', who: 'Scout', msg: 'Paper: buka AMD-SOL & NIO-SOL (bidask-retrace)' },
+    { t: '10:51', who: 'Nobi', msg: 'GATO-SOL di-arm ulang: TP +6% / SL -3%' },
+    { t: '09:17', who: 'Exec', msg: 'Buka GATO-SOL 0,15 SOL (30 bin bawah / 5 atas)' },
+    { t: '09:16', who: 'Nobi', msg: 'Rem harian dimatikan (permintaan Nobita)' },
+    { t: '07:58', who: 'Exec', msg: 'Buka AMD-SOL 0,20 SOL → stop-loss ~-0,022' },
+    { t: '06:53', who: 'Exec', msg: 'FLOAT-SOL 0,22 SOL → stop-loss ~-0,0166' },
+    { t: '06:53', who: 'Exec', msg: 'FLOAT-SOL ditutup +0,0050 (keluar rentang atas)' },
+    { t: '06:30', who: 'Exec', msg: 'AMD-SOL take-profit +0,0232 SOL' },
+    { t: '06:07', who: 'Scout', msg: 'Pool AMD-SOL dipilih, buka 0,20 SOL' }
+  ],
+  agents: [
+    { name: 'Nobi', role: 'Manajer', status: 'live', color: '#22d3ee' },
+    { name: 'Scout', role: 'Pencari Pool', status: 'idle', note: 'maks 1 posisi', color: '#a78bfa' },
+    { name: 'Radar', role: 'Pengecek Risiko', status: 'idle', note: 'RugCheck siaga', color: '#f472b6' },
+    { name: 'Quant', role: 'Analis Fee/Vol', status: 'thinking', note: 'paper trading', color: '#facc15' },
+    { name: 'Exec', role: 'Eksekutor', status: 'live', note: 'pantau GATO-SOL', color: '#4ade80' },
+    { name: 'Reporter', role: 'Pelapor', status: 'sleeping', note: 'lapor tiap :30', color: '#60a5fa' }
+  ]
+};
+// ===== NOBI_DATA END =====
+
+let D = NOBI_DATA; let ERR='';
+const TG=window.Telegram&&Telegram.WebApp; try{TG.ready();TG.expand();}catch(e){}
+const wibT=(ts)=>new Date(ts*1000+7*3600e3).toISOString().slice(11,16);
+function deriveAgents(d){const p=d.positions[0]; const m=new Date(Date.now()+7*3600e3).getUTCMinutes();
+ return NOBI_DATA.agents.map(a=>{const x={...a};
+  if(a.name==='Nobi'){x.status='live';x.note='kelola '+(p?p.pool:'mencari pool');}
+  if(a.name==='Scout'){x.status=p?'idle':'thinking';x.note=p?'maks 1 posisi':'cari pool baru';}
+  if(a.name==='Radar'){const near=p&&(p.pnlPct<=-2||!p.inRange||p.binsFromEdge<=3);x.status=near?'checking limits':'idle';x.note=near?'dekat batas!':'aman';}
+  if(a.name==='Quant'){x.status=d.paper.open.length?'thinking':'idle';x.note='paper '+d.paper.open.length+' posisi';}
+  if(a.name==='Exec'){x.status=p?'live':'idle';x.note=p?'pantau '+p.pool:'siaga';}
+  if(a.name==='Reporter'){x.status=(m>=28&&m<=33)?'live':'sleeping';x.note='lapor tiap :30';}
+  return x;});}
+function apply(r){const ps=r.positions.map(p=>({pool:p.pool,pubkey:(p.pubkey||'').slice(0,4)+'…'+(p.pubkey||'').slice(-3),opened:'-',depositSol:p.deposit||0,valueSol:p.value||0,pnlSol:p.pnlSol||0,pnlPct:p.pnlPct||0,inRange:p.inRange!==false,binsFromEdge:p.binsFromEdge??'-',tp:p.tp,sl:p.sl}));
+ const cl=r.trades.filter(t=>t.result!=null); const pd=r.pnlDay||{};
+ const act=[]; ps.forEach(p=>act.push({t:wibT(r.ts),who:'Exec',msg:p.pool+' '+(p.pnlPct>=0?'+':'')+p.pnlPct.toFixed(2)+'%, '+(p.inRange?'dalam rentang':'LUAR rentang')+' ('+p.binsFromEdge+' bin)'}));
+ r.paper.open.forEach(p=>act.push({t:p.since,who:'Quant',msg:'Paper '+p.pool+' '+(p.pct!=null?p.pct.toFixed(2)+'%':'')}));
+ r.paper.closed.slice(-4).reverse().forEach(p=>act.push({t:p.exit,who:'Quant',msg:'Paper tutup '+p.pool+' '+(p.pct!=null?p.pct.toFixed(2)+'%':'')+' ('+p.reason+')'}));
+ r.trades.slice(-8).reverse().forEach(t=>act.push({t:t.opened,who:'Exec',msg:'#'+t.n+' '+t.pool+' '+t.size+' → '+(t.result!=null?(t.approx?'~':'')+t.result:'jalan')+' '+(t.reason||'')}));
+ const d={...NOBI_DATA,updatedWib:'diperbarui '+new Date(r.ts*1000+7*3600e3).toISOString().slice(11,19)+' WIB',solUsd:r.solPrice||NOBI_DATA.solUsd,startSol:r.startSol,
+  wallet:{address:'GMAaqY…ruR6k',solBalance:r.walletSol||0},pnlToday:{realizedSol:pd.realizedSol||0,unrealizedSol:pd.unrealizedSol||0},
+  positions:ps,trades:{closed:r.closed,wins:r.wins,losses:r.closed-r.wins,netSol:cl.reduce((a,t)=>a+t.result,0)},
+  paper:r.paper.open.map(p=>({pool:p.pool,since:p.since,pct:p.pct||0})),activity:act.length?act:NOBI_DATA.activity};
+ d.agents=deriveAgents({...d,paper:r.paper}); D=d;}
+async function load(){const t=Date.now();let r=null;
+ for(const u of['https://raw.githubusercontent.com/Nobitangapak/nobi-lp/main/data.json?t='+t,'./data.json?t='+t]){try{const res=await fetch(u,{cache:'no-store'});if(res.ok){r=await res.json();break;}}catch(e){}}
+ if(r){apply(r);const age=Date.now()/1000-r.ts;ERR=age>300?'⚠ Data lama ('+Math.round(age/60)+' menit) – loop update mungkin berhenti':'';}else ERR='Gagal memuat data';
+ window.__force&&window.__force();}
+load(); setInterval(load,30000); setInterval(()=>window.__force&&window.__force(),1000);
+const fmt = (n, d = 4) => n.toFixed(d).replace('.', ',');
+const stColor = { live: '#4ade80', thinking: '#facc15', idle: '#94a3b8', sleeping: '#60a5fa', 'checking limits': '#f97316', 'cycle done': '#22d3ee' };
+const css = `
+@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-6px)}}
+@keyframes pulse{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}}
+@keyframes dash{to{stroke-dashoffset:-40}}
+@keyframes spin{to{transform:translate(-50%,-50%) rotateX(62deg) rotateZ(360deg)}}
+@keyframes flash{0%{background:rgba(74,222,128,.25)}100%{background:transparent}}
+@keyframes scroll{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
+.nb *{box-sizing:border-box}
+.nb button{cursor:pointer}
+`;
+
+function Panel({ title, children }) {
+  return <div style={{ border: '1px solid rgba(34,211,238,.35)', borderRadius: 10, background: 'rgba(8,15,35,.85)', padding: 10, marginBottom: 10, boxShadow: '0 0 14px rgba(34,211,238,.12)' }}>
+    <div style={{ fontSize: 10, letterSpacing: 2, color: '#22d3ee', marginBottom: 6 }}>{title}</div>{children}</div>;
+}
+const Row = ({ k, v, c }) => <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '2px 0' }}><span style={{ color: '#94a3b8' }}>{k}</span><span style={{ color: c || '#e2e8f0', fontFamily: 'monospace' }}>{v}</span></div>;
+
+function useNow() { return new Date(); }
+function countdown(now, h) {
+  const wib = new Date(now.getTime() + 7 * 3600e3); const sec = wib.getUTCHours() * 3600 + wib.getUTCMinutes() * 60 + wib.getUTCSeconds();
+  const left = h * 3600 - (sec % (h * 3600)); const p = (x) => String(x).padStart(2, '0');
+  return `${p(Math.floor(left / 3600))}:${p(Math.floor(left % 3600 / 60))}:${p(left % 60)}`;
+}
+
+function App() {
+  const V = window.__V; const [, force] = useState(0); window.__force = () => force(x => x + 1);
+  const now = useNow();
+  const [left, setLeft] = useState(0);
+  const [right, setRight] = useState(0);
+  const [tab, setTab] = useState('LIVE');
+  const [w, setW] = useState(900);
+  useEffect(() => { const f = () => setW(window.innerWidth); f(); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
+  const mobile = w < 820;
+  const posVal = D.positions.reduce((a, p) => a + p.valueSol, 0);
+  const total = D.wallet.solBalance + posVal;
+  const vsStart = (total / D.startSol - 1) * 100;
+  const n = D.agents.length;
+  const R = mobile ? 38 : 40;
+
+  const leftPanel = <div>
+    <Panel title="STATUS TIM">{D.agents.map(a => <Row key={a.name} k={a.name + ' · ' + a.role} v={a.status.toUpperCase()} c={stColor[a.status]} />)}</Panel>
+    <Panel title="CANDLE BERIKUTNYA">{[1, 4, 12, 24].map(h => <Row key={h} k={h + 'j'} v={countdown(now, h)} c="#22d3ee" />)}</Panel>
+    <Panel title="POSISI">{D.positions.map(p => <div key={p.pubkey}><Row k="Pool" v={p.pool} /><Row k="Ukuran" v={fmt(p.depositSol, 2) + ' SOL'} /><Row k="Nilai" v={fmt(p.valueSol) + ' SOL'} /><Row k="PnL" v={(p.pnlPct >= 0 ? '+' : '') + fmt(p.pnlPct, 2) + '%'} c={p.pnlPct >= 0 ? '#4ade80' : '#f87171'} /><Row k="Masuk" v={p.opened} /></div>)}</Panel>
+    <Panel title="SETUP TIM"><Row k="Take profit" v={D.rules.tp} c="#4ade80" /><Row k="Stop loss" v={D.rules.sl} c="#f87171" /><Row k="Maks/posisi" v={D.rules.maxPerPos} /><Row k="Jumlah posisi" v={D.rules.maxPos} /><Row k="Cadangan" v={D.rules.reserve} /><Row k="Bins" v={D.rules.binsBelow + ' bawah / ' + D.rules.binsAbove + ' atas'} /><Row k="Modal awal" v={fmt(D.startSol, 3) + ' SOL'} /><Row k="Wallet" v={D.wallet.address} /></Panel>
+  </div>;
+  const rightPanel = <div>
+    <Panel title="POSISI LP">{D.positions.map(p => <div key={p.pubkey} style={{ animation: 'flash 2s' }}><div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}><span>{p.pool}</span><span style={{ color: p.inRange ? '#4ade80' : '#f87171', fontSize: 11 }}>{p.inRange ? '● DALAM RENTANG' : '● LUAR RENTANG'}</span></div><Row k="Jarak ke tepi" v={p.binsFromEdge + ' bin'} /><Row k="TP / SL" v={'+' + p.tp + '% / ' + p.sl + '%'} /><Row k="PnL" v={fmt(p.pnlSol, 4) + ' SOL'} c={p.pnlSol >= 0 ? '#4ade80' : '#f87171'} /></div>)}</Panel>
+    <Panel title="PAPER TRADING (SIMULASI)">{D.paper.map(p => <Row key={p.pool} k={p.pool + ' · sejak ' + p.since} v={fmt(p.pct, 2) + '%'} c={p.pct >= 0 ? '#4ade80' : '#f87171'} />)}</Panel>
+    <Panel title="AKTIVITAS"><div style={{ height: 260, overflow: 'hidden', fontSize: 11, fontFamily: 'monospace' }}><div style={{ animation: `scroll ${D.activity.length * 4}s linear infinite` }}>{[...D.activity, ...D.activity].map((a, i) => { const ag = D.agents.find(x => x.name === a.who); return <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid rgba(148,163,184,.12)' }}><span style={{ color: '#64748b' }}>{a.t}</span> - <span style={{ color: ag?.color }}>{a.who}</span>: {a.msg}</div>; })}</div></div></Panel>
+  </div>;
+
+  const drawer = (open, side, content, close) => <div style={{ position: 'fixed', top: 0, bottom: 0, [side]: 0, width: 'min(86vw,320px)', zIndex: 95, background: '#050b1c', borderLeft: side === 'right' ? '1px solid #164e63' : undefined, borderRight: side === 'left' ? '1px solid #164e63' : undefined, padding: 12, overflowY: 'auto', transform: `translateX(${(side === 'left' ? -1 : 1) * (1 - open) * 105}%)`, boxShadow: open > 0 ? '0 0 40px rgba(34,211,238,.25)' : 'none' }}><button onClick={close} style={{ float: 'right', background: 'none', border: '1px solid #22d3ee', color: '#22d3ee', borderRadius: 6, padding: '2px 8px' }}>✕</button><div style={{ clear: 'both', height: 6 }} />{content}</div>;
+
+  return <div className="nb" style={{ background: 'radial-gradient(ellipse at 50% 40%,#0b1e46 0%,#050914 60%,#02040a 100%)', color: '#e2e8f0', minHeight: '100vh', fontFamily: 'Inter,system-ui,sans-serif', overflow: 'hidden', position: 'relative' }}>
+    <style>{css}</style>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderBottom: '1px solid rgba(34,211,238,.3)', flexWrap: 'wrap', background: 'rgba(2,6,23,.7)' }}>
+      <div style={{ fontWeight: 900, letterSpacing: 4, color: '#22d3ee', textShadow: '0 0 10px #22d3ee' }}>◆ NOBI</div>
+      <div style={{ display: 'flex', gap: 4 }}>{['LIVE', 'METEORA LP', 'SYRA'].map(t => <button key={t} onClick={() => setTab(t)} style={{ fontSize: 10, padding: '4px 8px', borderRadius: 6, border: '1px solid ' + (tab === t ? '#22d3ee' : '#334155'), background: tab === t ? 'rgba(34,211,238,.15)' : 'transparent', color: tab === t ? '#22d3ee' : '#94a3b8' }}>{t === 'LIVE' ? '● ' : ''}{t}</button>)}</div>
+      <div style={{ marginLeft: 'auto', textAlign: 'right' }}><div style={{ fontSize: 10, color: '#94a3b8' }}>TOTAL ASET</div><div style={{ fontWeight: 800, fontFamily: 'monospace' }}>{fmt(total)} SOL <span style={{ color: '#94a3b8', fontWeight: 400 }}>≈ ${(total * D.solUsd).toFixed(2)}</span> <span style={{ color: vsStart >= 0 ? '#4ade80' : '#f87171', fontSize: 12 }}>{vsStart >= 0 ? '+' : ''}{vsStart.toFixed(1).replace('.', ',')}%</span></div></div>
+    </div>
+    <div style={{ display: 'flex', gap: 8, padding: '6px 12px', fontSize: 11, color: '#94a3b8', flexWrap: 'wrap' }}>
+      <span>SOL ${D.solUsd.toFixed(2)}</span><span>· Trade {D.trades.closed} ({D.trades.wins}M/{D.trades.losses}K) net {fmt(D.trades.netSol, 3)} SOL</span><span>· Data: {D.updatedWib}</span>
+      {mobile && <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}><button onClick={() => setLeft(true)} style={{ fontSize: 11, background: 'rgba(34,211,238,.12)', border: '1px solid #22d3ee', color: '#22d3ee', borderRadius: 6, padding: '3px 8px' }}>☰ Tim</button><button onClick={() => setRight(true)} style={{ fontSize: 11, background: 'rgba(167,139,250,.12)', border: '1px solid #a78bfa', color: '#a78bfa', borderRadius: 6, padding: '3px 8px' }}>Aktivitas ▸</button></span>}
+    </div>
+    <div style={{ display: 'flex', gap: 10, padding: '0 12px 12px' }}>
+      {!mobile && <div style={{ width: 250, flexShrink: 0, transform: `translateX(${(1 - V.lp) * -110}%)`, opacity: V.lp }}>{leftPanel}</div>}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>{[[D.positions[0]?D.positions[0].pool:'Posisi', D.positions[0] ? fmt(D.positions[0].pnlPct, 2) + '%' : '-'], ['Wallet', fmt(D.wallet.solBalance) + ' SOL'], ['PnL hari ini', fmt(D.pnlToday.realizedSol + D.pnlToday.unrealizedSol, 4)]].map(([k, v]) => <div key={k} style={{ flex: 1, border: '1px solid rgba(167,139,250,.35)', borderRadius: 8, padding: '6px 8px', background: 'linear-gradient(180deg,rgba(76,29,149,.25),rgba(8,15,35,.6))', transform: 'perspective(400px) rotateX(8deg)' }}><div style={{ fontSize: 9, color: '#a78bfa' }}>{k}</div><div style={{ fontFamily: 'monospace', fontSize: 13, color: String(v).startsWith('-') ? '#f87171' : '#4ade80' }}>{v}</div></div>)}</div>
+        <div style={{ position: 'relative', width: '100%', aspectRatio: mobile ? '1/1' : '16/10', maxHeight: 560 }}>
+          <div style={{ position: 'absolute', left: '50%', top: '55%', width: '86%', aspectRatio: '1/1', border: '2px solid rgba(34,211,238,.35)', borderRadius: '50%', boxShadow: '0 0 40px rgba(34,211,238,.25), inset 0 0 60px rgba(34,211,238,.15)', animation: 'spin 40s linear infinite', backgroundImage: 'repeating-radial-gradient(circle,rgba(34,211,238,.08) 0 2px,transparent 2px 30px)' }} />
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>{D.agents.map((a, i) => { const ang = (i / n) * Math.PI * 2 - Math.PI / 2; const x = 50 + Math.cos(ang) * R; const y = 55 + Math.sin(ang) * R * 0.5; return <line key={a.name} x1={x} y1={y} x2={50} y2={55} stroke={a.color} strokeWidth={a.status === 'live' ? 0.6 : 0.25} strokeDasharray="2 3" opacity={a.status === 'live' || a.status === 'thinking' ? 0.9 : 0.35} style={{ animation: `dash ${a.status === 'live' ? 1.5 : 4}s linear infinite` }} />; })}</svg>
+          <div style={{ position: 'absolute', left: '50%', top: '55%', width: 70, height: 70, borderRadius: '50%', background: 'radial-gradient(circle,#a5f3fc 0%,#22d3ee 35%,rgba(34,211,238,0) 70%)', animation: 'pulse 2.5s ease-in-out infinite', boxShadow: '0 0 50px #22d3ee' }} />
+          <div style={{ position: 'absolute', left: '50%', top: '55%', transform: 'translate(-50%,40px)', fontSize: 9, color: '#67e8f9', letterSpacing: 2, whiteSpace: 'nowrap' }}>CORE · SYRA LP</div>
+          {D.agents.map((a, i) => { const ang = (i / n) * Math.PI * 2 - Math.PI / 2; const x = 50 + Math.cos(ang) * R; const y = 55 + Math.sin(ang) * R * 0.5; const sc = 0.8 + (y - 35) / 100; return <div key={a.name} style={{ position: 'absolute', left: x + '%', top: y + '%', zIndex: Math.round(y), transform: `translate(-50%,-80%) scale(${sc})` }}>
+            <div style={{ position: 'absolute', left: '50%', bottom: '100%', marginBottom: 4, animation: `bob ${3 + i * 0.3}s ease-in-out infinite`, background: 'rgba(5,11,28,.8)', border: '1px solid ' + a.color, borderRadius: 6, padding: '3px 6px', whiteSpace: 'nowrap', boxShadow: '0 0 10px ' + a.color + '55', textAlign: 'center' }}><div style={{ fontSize: 11, fontWeight: 800, color: a.color }}>{a.name}</div><div style={{ fontSize: 8, color: '#cbd5e1' }}>{a.role}</div><div style={{ fontSize: 8, color: stColor[a.status] }}>● {a.status}{a.note ? ' · ' + a.note : ''}</div></div>
+            <svg width="44" height="56" viewBox="0 0 44 56"><ellipse cx="22" cy="52" rx="18" ry="4" fill={a.color} opacity=".35" /><rect x="12" y="20" width="20" height="26" rx="7" fill="#0f172a" stroke={a.color} strokeWidth="1.5" /><circle cx="22" cy="12" r="8" fill="#0f172a" stroke={a.color} strokeWidth="1.5" /><rect x="16" y="10" width="12" height="3" rx="1.5" fill={a.color} opacity={a.status === 'sleeping' ? .3 : 1} /><rect x="2" y="36" width="40" height="6" rx="2" fill={a.color} opacity=".5" /></svg>
+          </div>; })}
+        </div>
+      </div>
+      {!mobile && <div style={{ width: 280, flexShrink: 0, transform: `translateX(${(1 - V.rp) * 110}%)`, opacity: V.rp }}>{rightPanel}</div>}
+    </div>
+    {mobile && drawer(left, 'left', leftPanel, () => setLeft(false))}
+    {mobile && drawer(right, 'right', rightPanel, () => setRight(false))}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: mobile ? 'flex-end' : 'center', paddingBottom: mobile ? '18vh' : 0, opacity: V.title, background: `rgba(2,4,10,${0.55 * V.title})` }}>
+      <div style={{ transform: `translateY(${(1 - V.title) * 30}px)`, textAlign: 'center' }}>
+        <div style={{ fontSize: mobile ? 44 : 64, fontWeight: 900, letterSpacing: 8, color: '#22d3ee', textShadow: '0 0 24px #22d3ee' }}>◆ NOBI</div>
+        <div style={{ fontSize: mobile ? 20 : 28, fontWeight: 700, color: '#e2e8f0', marginTop: 8 }}>AI Agent LP di Solana</div>
+        <div style={{ fontSize: mobile ? 12 : 15, color: '#a78bfa', marginTop: 10, letterSpacing: 2 }}>METEORA DLMM · SYRA LP · 6 AGEN</div>
+      </div>
+    </div>
+    <div style={{ textAlign: 'center', fontSize: 10, color: '#475569', padding: 8 }}>{ERR||'Data asli Syra (read-only) · update tiap ~60 detik'} · bukan nasihat keuangan</div>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>
