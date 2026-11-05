@@ -1,0 +1,5 @@
+Credits
+- Avatar "Nana" (male trader): custom anime illustration generated with an AI image tool from the owner's own reference image; background removed with rembg (isnet-anime).
+- Candlestick background: procedurally generated, decorative only (not PnL).
+
+All stats are PAPER TRADING / SIMULASI, not real money.
