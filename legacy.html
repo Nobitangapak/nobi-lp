@@ -1,0 +1,114 @@
+<!doctype html><html lang=id><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nobi LP • Ruang Komando</title><script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#05060f;--c:#22d3ee;--p:#a855f7;--g:#22c55e;--r:#f43f5e;--y:#facc15;--t:#e6f1ff;--m:#8a9bb8;--gl:rgba(255,255,255,.055);--bd:rgba(255,255,255,.1)}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--t);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{padding:calc(10px + env(safe-area-inset-top)) 12px calc(20px + env(safe-area-inset-bottom));min-height:100vh;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:-30%;z-index:-1;background:radial-gradient(circle at 20% 20%,rgba(168,85,247,.28),transparent 40%),radial-gradient(circle at 80% 30%,rgba(34,211,238,.22),transparent 40%),radial-gradient(circle at 50% 90%,rgba(34,197,94,.15),transparent 40%);animation:drift 18s ease-in-out infinite alternate}
+body:after{content:"";position:fixed;inset:0;z-index:-1;background-image:linear-gradient(rgba(34,211,238,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.05) 1px,transparent 1px);background-size:28px 28px;mask:linear-gradient(#000,transparent 70%)}
+@keyframes drift{to{transform:translate(4%,-3%) rotate(8deg)}}
+.wrap{max-width:430px;margin:auto;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--gl);border:1px solid var(--bd);border-radius:18px;padding:14px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 8px 30px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);animation:up .6s both}
+@keyframes up{from{opacity:0;transform:translateY(14px)}}
+h2{margin:0 0 10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--m);display:flex;justify-content:space-between;align-items:center}
+.hdr{display:flex;align-items:center;justify-content:space-between}
+.logo{font-weight:800;font-size:19px;background:linear-gradient(90deg,var(--c),var(--p));-webkit-background-clip:text;color:transparent}
+.sub{color:var(--m);font-size:12px}
+.live{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12px;padding:5px 10px;border-radius:99px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:var(--g)}
+.live i{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor;animation:pulse 1.4s infinite}
+.live.stale{color:var(--y);background:rgba(250,204,21,.12);border-color:rgba(250,204,21,.4)}
+@keyframes pulse{50%{opacity:.3;transform:scale(.7)}}
+.warn{display:none;background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.4);color:var(--y);padding:8px 12px;border-radius:12px;font-size:12px}
+.big{font-size:30px;font-weight:800;letter-spacing:-.02em}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pos{color:var(--g)}.neg{color:var(--r)}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.kp div{background:rgba(255,255,255,.04);border-radius:12px;padding:8px;text-align:center}.kp b{display:block;font-size:15px}.kp span{font-size:11px;color:var(--m)}
+.agents{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ag{position:relative;border-radius:14px;padding:10px 6px;text-align:center;background:rgba(255,255,255,.04);border:1px solid var(--bd);overflow:hidden}
+.ag:before{content:"";position:absolute;inset:-50%;background:conic-gradient(from 0deg,transparent 0 70%,var(--a) 85%,transparent 100%);animation:spin 4s linear infinite;opacity:.55}
+.ag:after{content:"";position:absolute;inset:1px;border-radius:13px;background:#0a0d1c}
+.ag>*{position:relative;z-index:1}@keyframes spin{to{transform:rotate(360deg)}}
+.av{width:38px;height:38px;margin:0 auto 6px;border-radius:50%;display:grid;place-items:center;font-size:19px;background:radial-gradient(circle,var(--a),transparent 70%);box-shadow:0 0 18px var(--a);animation:breathe 2.6s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:0 0 4px var(--a);transform:scale(.94)}}
+.ag b{font-size:13px}.ag small{display:block;font-size:10px;color:var(--m)}
+.st{display:inline-flex;align-items:center;gap:4px;font-size:10px;margin-top:4px;color:var(--a)}.st i{width:6px;height:6px;border-radius:50%;background:var(--a);animation:pulse 1.2s infinite}
+.gauge{display:flex;gap:14px;align-items:center}
+.ring{position:relative;width:150px;height:150px;flex:none}.ring svg{transform:rotate(-90deg)}
+.ring .ctr{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.ring .ctr b{font-size:26px;font-weight:800}.ring .ctr span{font-size:11px;color:var(--m);display:block}
+.arc{transition:stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)}
+.meter{position:relative;height:10px;border-radius:99px;background:linear-gradient(90deg,var(--r),#334155 33%,#334155 34%,var(--g));margin:18px 0 6px}
+.meter .pin{position:absolute;top:-5px;width:4px;height:20px;border-radius:3px;background:#fff;box-shadow:0 0 12px #fff;transition:left 1s}
+.meter .z{position:absolute;top:-4px;width:2px;height:18px;background:rgba(255,255,255,.5)}
+.lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--m)}
+.range{height:14px;border-radius:99px;background:rgba(255,255,255,.07);position:relative;overflow:hidden;margin:8px 0 4px}
+.range>i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--p),var(--c));border-radius:99px;transition:width 1s}
+.range>i:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:shine 2.2s infinite;transform:translateX(-100%)}
+@keyframes shine{to{transform:translateX(100%)}}
+.tag{font-size:11px;padding:3px 8px;border-radius:99px;background:rgba(34,211,238,.12);color:var(--c);border:1px solid rgba(34,211,238,.3)}
+.tag.bad{background:rgba(244,63,94,.12);color:var(--r);border-color:rgba(244,63,94,.35)}
+.feed{height:150px;overflow:hidden;position:relative;font:12px/1.5 ui-monospace,Menlo,monospace;mask:linear-gradient(transparent,#000 15%,#000 85%,transparent)}
+.feed div{padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.06);animation:up .4s both}.feed em{font-style:normal;color:var(--c)}
+.cur{display:inline-block;width:7px;height:13px;background:var(--c);vertical-align:-2px;animation:pulse 1s infinite}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:11px;padding:5px 9px;border-radius:10px;border:1px solid;font-weight:600}
+.chip.w{color:var(--g);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.1)}
+.chip.l{color:var(--r);border-color:rgba(244,63,94,.4);background:rgba(244,63,94,.1)}
+.chip.o{color:var(--y);border-color:rgba(250,204,21,.4);background:rgba(250,204,21,.1);animation:pulse 2s infinite}
+.pp{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px}
+.foot{text-align:center;color:var(--m);font-size:11px}
+</style></head><body><div class=wrap>
+<div class=hdr><div><div class=logo>⚡ NOBI LP COMMAND</div><div class=sub>Ruang komando agen AI • Meteora DLMM</div></div><div id=live class=live><i></i><span>LIVE</span></div></div>
+<a href="./meme/" style="display:block;margin:10px 0;padding:12px;border-radius:14px;text-align:center;font-weight:700;text-decoration:none;color:#fff;background:linear-gradient(90deg,#ff2bd6,#00f0ff)">🐸 Buka Dasbor Trading Meme (simulasi) →</a>
+<div id=warn class=warn>⚠️ Data belum diperbarui lebih dari 5 menit. Tunggu sebentar…</div>
+<div class=card><h2>Total Aset <span id=upd class=sub></span></h2>
+<div class=row><div><div class=big id=eq>–</div><div id=chg class=sub></div></div><svg id=spark width=130 height=48></svg></div>
+<div class=kp><div><b id=wal>–</b><span>Di wallet</span></div><div><b id=day>–</b><span>Hasil hari ini</span></div><div><b id=wr>–</b><span>Menang</span></div></div></div>
+<div class=card><h2>Tim Agen <span class=tag>6 aktif</span></h2><div class=agents id=agents></div></div>
+<div class=card id=poscard><h2>Posisi Terbuka <span id=ptag class=tag></span></h2><div id=pos></div></div>
+<div class=card><h2>Aktivitas Langsung</h2><div class=feed id=feed></div></div>
+<div class=card><h2>Riwayat Trade <span id=wl class=sub></span></h2><div class=chips id=trades></div></div>
+<div class=card><h2>Latihan (Simulasi) <span class=tag>tanpa uang asli</span></h2><div id=paper></div></div>
+<div class=card><h2>Aturan Main</h2><div id=rules class=chips></div></div>
+<div class=foot>Wallet <span id=ws></span> • diperbarui otomatis tiap 30 detik</div>
+</div>
+<script>
+const tg=window.Telegram&&Telegram.WebApp;try{tg.ready();tg.expand();tg.setHeaderColor&&tg.setHeaderColor('#05060f');tg.setBackgroundColor&&tg.setBackgroundColor('#05060f')}catch(e){}
+const $=id=>document.getElementById(id),f=(n,d=4)=>(n==null||isNaN(n))?'–':(+n).toFixed(d),sg=n=>(n>0?'+':'')+f(n,4),cls=n=>n>=0?'pos':'neg';
+const wib=ts=>new Date(ts*1000).toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta',hour:'2-digit',minute:'2-digit'})+' WIB';
+let D=null,feedQ=[],shown=new Set();
+function agents(d){const p=d.positions&&d.positions[0];const A=[['Nobi','Komandan','🧠','#a855f7','Memimpin tim'],['Scout','Cari pool','🔭','#22d3ee','Memindai pool'],['Radar','Pantau risiko','📡','#facc15',p?(p.inRange?'Aman, in range':'Keluar range!'):'Siaga'],['Quant','Hitung untung','📊','#3b82f6',p?('PnL '+f(p.pnlPct,1)+'%'):'Menunggu'],['Exec','Eksekusi','⚙️','#22c55e',p?'Jaga posisi':'Siap buka'],['Reporter','Lapor','📝','#f472b6','Laporan tiap jam']];
+$('agents').innerHTML=A.map(a=>`<div class=ag style="--a:${a[3]}"><div class=av>${a[2]}</div><b>${a[0]}</b><small>${a[1]}</small><div class=st><i></i>${a[4]}</div></div>`).join('')}
+function spark(d){let h=JSON.parse(localStorage.nobiEq||'[]');if(!h.length||h[h.length-1][0]!==d.ts)h.push([d.ts,d.equitySol]);h=h.slice(-120);localStorage.nobiEq=JSON.stringify(h);
+const v=[d.startSol,...h.map(x=>x[1])],mn=Math.min(...v),mx=Math.max(...v),W=130,H=48,s=(mx-mn)||1e-6,pts=v.map((y,i)=>[i*W/Math.max(v.length-1,1),H-4-(y-mn)/s*(H-8)]);
+const c=d.equitySol>=d.startSol?'#22c55e':'#f43f5e',l=pts.map(p=>p.join(',')).join(' ');
+$('spark').innerHTML=`<defs><linearGradient id=sg x1=0 y1=0 x2=0 y2=1><stop offset=0 stop-color="${c}" stop-opacity=.5 /><stop offset=1 stop-color="${c}" stop-opacity=0 /></linearGradient></defs><polygon points="0,${H} ${l} ${W},${H}" fill="url(#sg)"/><polyline points="${l}" fill=none stroke="${c}" stroke-width=2 style="filter:drop-shadow(0 0 4px ${c})"/><circle cx="${pts[pts.length-1][0]}" cy="${pts[pts.length-1][1]}" r=3 fill="${c}"/>`}
+function pos(d){const p=d.positions&&d.positions[0];if(!p){$('ptag').textContent='kosong';$('pos').innerHTML='<div class=sub>Belum ada posisi. Scout sedang mencari pool terbaik…</div>';return}
+const tp=p.tp??d.rules.tp,sl=p.sl??d.rules.sl,pc=p.pnlPct||0,R=62,C=2*Math.PI*R,fr=Math.min(Math.abs(pc)/(pc>=0?tp:-sl),1),col=pc>=0?'#22c55e':'#f43f5e';
+$('ptag').textContent=p.inRange?'✓ in range':'⚠ out of range';$('ptag').className='tag'+(p.inRange?'':' bad');
+const pin=Math.max(0,Math.min(100,(pc-sl)/(tp-sl)*100)),z=(-sl)/(tp-sl)*100,bins=p.binsFromEdge??0,tot=(d.rules.binsBelow||30)+(d.rules.binsAbove||5);
+$('pos').innerHTML=`<div class=gauge><div class=ring><svg width=150 height=150><circle cx=75 cy=75 r=${R} stroke="rgba(255,255,255,.08)" stroke-width=12 fill=none /><circle class=arc id=arc cx=75 cy=75 r=${R} stroke="${col}" stroke-width=12 fill=none stroke-linecap=round stroke-dasharray="${C}" stroke-dashoffset="${C}" style="filter:drop-shadow(0 0 8px ${col})"/></svg><div class=ctr><div><b class=${cls(pc)}>${pc>0?'+':''}${f(pc,2)}%</b><span>menuju ${pc>=0?'TP +'+tp:'SL '+sl}%</span></div></div></div>
+<div><div style="font-size:18px;font-weight:800">${p.pool}</div><div class=sub>Modal ${f(p.deposit,3)} SOL</div><div class=sub>Nilai ${f(p.value,4)} SOL</div><div class="${cls(p.pnlSol)}" style="font-weight:700;margin-top:4px">${sg(p.pnlSol)} SOL</div><div class=sub>≈ $${f(p.pnlSol*d.solPrice,2)}</div></div></div>
+<div class=meter><div class=z style="left:${z}%"></div><div class=pin style="left:calc(${pin}% - 2px)"></div></div><div class=lbl><span>SL ${sl}%</span><span>0</span><span>TP +${tp}%</span></div>
+<div class=lbl style="margin-top:12px"><span>Jarak dari batas range</span><b style="color:var(--c)">${bins} bin</b></div><div class=range><i style="width:${Math.min(100,bins/tot*100*2)}%"></i></div>
+<div class=sub>${p.inRange?'Harga masih di dalam rentang, posisi menghasilkan fee.':'Harga keluar rentang '+(p.oorSide||'')+'.'}</div>`;
+requestAnimationFrame(()=>setTimeout(()=>{$('arc').style.strokeDashoffset=C*(1-fr)},60))}
+function feed(d){const p=d.positions&&d.positions[0],t=wib(d.ts),m=[['Radar',p?`${p.pool} ${p.inRange?'in range':'out of range'}, ${p.binsFromEdge} bin dari batas`:'Tidak ada posisi']],
+q=[['Quant',p?`PnL ${p.pnlPct>0?'+':''}${f(p.pnlPct,2)}% (${sg(p.pnlSol)} SOL)`:'Menunggu posisi'],['Nobi',`Total aset ${f(d.equitySol,4)} SOL, SOL $${f(d.solPrice,2)}`],['Scout','Memindai pool baru sesuai filter'],['Exec',`Auto-exit aktif: TP +${d.rules.tp}% / SL ${d.rules.sl}%`],['Reporter','Data dikirim ke dasbor']];
+[...m,...q].forEach(x=>{const k=d.ts+x[0];if(!shown.has(k)){shown.add(k);feedQ.push([t,...x])}})}
+setInterval(()=>{if(!feedQ.length)return;const x=feedQ.shift(),el=$('feed'),div=document.createElement('div');div.innerHTML=`<span class=sub>${x[0].slice(0,5)}</span> <em>${x[1]}</em> `;el.prepend(div);
+let i=0,s=x[2],sp=document.createElement('span'),c=document.createElement('span');c.className='cur';div.append(sp,c);const ty=setInterval(()=>{sp.textContent=s.slice(0,++i);if(i>=s.length){clearInterval(ty);c.remove()}},22);while(el.children.length>12)el.lastChild.remove()},1300);
+function render(d){D=d;const ch=d.equitySol-d.startSol,pc=ch/d.startSol*100;
+$('eq').innerHTML=`${f(d.equitySol,4)} <span style="font-size:15px;color:var(--m)">SOL</span>`;$('chg').innerHTML=`<span class=${cls(ch)}>${sg(ch)} SOL (${pc>0?'+':''}${f(pc,1)}%)</span> dari modal ${d.startSol} • ≈ $${f(d.equityUsd,2)}`;
+$('wal').textContent=f(d.walletSol,3);const dt=d.pnlDay&&d.pnlDay.totalSol;$('day').textContent=sg(dt);$('day').className=cls(dt);$('wr').textContent=`${d.wins}/${d.closed}`;
+$('ws').textContent=d.walletShort||'';agents(d);spark(d);pos(d);feed(d);
+$('trades').innerHTML=(d.trades||[]).slice().reverse().map(t=>t.result==null?`<span class="chip o">#${t.n} ${t.pool.split(' ')[0]} • berjalan</span>`:`<span class="chip ${t.result>=0?'w':'l'}">#${t.n} ${t.pool.split(' ')[0]} ${t.result>0?'+':''}${t.result}</span>`).join('');
+$('wl').textContent=`${d.wins} menang • ${d.closed-d.wins} kalah`;
+const pp=d.paper||{};$('paper').innerHTML=(pp.open||[]).map(o=>`<div class=pp><span>🟡 ${o.pool} <span class=sub>sejak ${o.since}</span></span><b class=${cls(o.pct)}>${f(o.pct,2)}%</b></div>`).join('')+(pp.closed||[]).slice(-4).reverse().map(o=>`<div class=pp><span>${o.pct>=0?'🟢':'🔴'} ${o.pool} <span class=sub>${o.exit}</span></span><b class=${cls(o.pct)}>${f(o.pct,2)}%</b></div>`).join('')+`<div class=sub style="margin-top:6px">Selesai: ${pp.closedCount||0} • menang ${pp.wins||0}</div>`;
+const r=d.rules||{};$('rules').innerHTML=[`🎯 TP +${r.tp}%`,`🛡️ SL ${r.sl}%`,`💰 Maks ${r.maxSol} SOL`,`🔒 Cadangan ${r.reserveSol} SOL`,`📏 ${r.binsBelow} bin bawah / ${r.binsAbove} atas`,`💡 ${r.principle||''}`].map(x=>`<span class="chip w" style="color:var(--t)">${x}</span>`).join('');tick()}
+function tick(){if(!D)return;const age=Date.now()/1000-D.ts,st=age>300;$('live').className='live'+(st?' stale':'');$('live').querySelector('span').textContent=st?'TERTUNDA':'LIVE';$('warn').style.display=st?'block':'none';
+$('upd').textContent='update '+wib(D.ts)+' ('+(age<60?Math.max(0,age|0)+' dtk':(age/60|0)+' mnt')+' lalu)'}
+async function load(){const t=Date.now();for(const u of['https://raw.githubusercontent.com/Nobitangapak/nobi-lp/main/data.json?t='+t,'./data.json?t='+t]){try{const r=await fetch(u,{cache:'no-store'});if(r.ok){render(await r.json());return}}catch(e){}}}
+load();setInterval(load,30000);setInterval(tick,1000);
+</script></body></html>
