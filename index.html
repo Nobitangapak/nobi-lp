@@ -27,7 +27,7 @@ h1 .g{display:block;background:linear-gradient(90deg,var(--pink),#b67bff 45%,var
 .card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:18px;padding:12px}
 .rooms{display:flex;flex-direction:column;gap:9px;margin-bottom:12px}
 .rooms .lbl{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:1.2px}
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.seg button:nth-child(3){grid-column:1/-1}
 .seg button{all:unset;cursor:pointer;border:1px solid var(--line);border-radius:13px;padding:10px;background:#0b0d19;display:flex;gap:9px;align-items:center}
 .seg button b{display:block;font-size:13.5px}.seg button span{font-size:11px;color:var(--mut)}
 .seg button i{font-style:normal;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#1b1e33;font-size:15px;flex:none}
@@ -78,6 +78,7 @@ footer{margin-top:16px;font-size:11px;color:var(--mut);line-height:1.5;text-alig
   <div class="seg">
     <button id="r-lp" class="on"><i>🏢</i><div><b>Lantai LP</b><span>6 agen alur LP</span></div></button>
     <button id="r-tr"><i>📈</i><div><b>Ruang Trading</b><span>Dompet &amp; riwayat</span></div></button>
+    <button id="r-meme"><i>🚀</i><div><b>Ruang Trading Meme</b><span>Nobitradememe · 4 agen</span></div></button>
   </div>
 </div>
 <div class="stats">
@@ -95,7 +96,9 @@ footer{margin-top:16px;font-size:11px;color:var(--mut);line-height:1.5;text-alig
 </div>
 <div class="chips" id="chips"></div>
 <div class="card panel" id="panel"></div>
-<h2>Riwayat trade terakhir</h2>
+<h2>Trading meme (Nobitradememe)</h2>
+<div class="card" id="meme"></div>
+<h2>Riwayat trade LP terakhir</h2>
 <div class="card" id="trades"></div>
 <h2>Status rutinitas</h2>
 <div class="card" id="routines"></div>
