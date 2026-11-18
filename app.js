@@ -29,7 +29,9 @@ const AGENTS = [
 ];
 
 /* ---------- state ---------- */
-let D = null, prevD = null, selected = 'pantau', room = 'lp';
+const MODE = document.body.dataset.mode || 'all'; const MEME = MODE === 'meme';
+const DATA_URL = document.body.dataset.src || 'data.json';
+let D = null, prevD = null, selected = MEME ? 'm_acc' : 'pantau', room = MEME ? 'meme' : 'lp';
 
 /* ---------- renderer ---------- */
 const canvas = $('c');
@@ -54,7 +56,7 @@ function flyTo(target, offset, dur = 1.1) {
 function fitOffset(off) { // push camera back on narrow screens
   const a = camera.aspect; const k = a < 0.75 ? 1.3 : a < 1 ? 1.12 : 0.9; return off.clone().multiplyScalar(k);
 }
-function goRoom(r, dur) { room = r; flyTo(ROOMS[r].t, fitOffset(ROOMS[r].off), dur); ['lp', 'tr', 'meme'].forEach((k) => $('r-' + k).classList.toggle('on', r === k)); $('roomtag').textContent = { lp: 'Lantai LP', tr: 'Ruang Trading', meme: 'Ruang Trading Meme' }[r]; }
+function goRoom(r, dur) { room = r; flyTo(ROOMS[r].t, fitOffset(ROOMS[r].off), dur); ['lp', 'tr', 'meme'].forEach((k) => { const b = $('r-' + k); b && b.classList.toggle('on', r === k); }); $('roomtag').textContent = { lp: 'Lantai LP', tr: 'Ruang Trading', meme: 'Ruang Trading Meme' }[r]; }
 
 /* ---------- lights ---------- */
 scene.add(new THREE.HemisphereLight('#c4cbff', '#3a2a50', 1.9));
@@ -481,17 +483,17 @@ canvas.addEventListener('pointerup', (e) => {
 let follow = null;
 function select(id, zoom) {
   selected = id; renderChips(); renderPanel(); Object.values(avatars).forEach(updateTag);
-  if (zoom) { const av = avatars[id]; follow = id; flyTo(av.root.position.clone().add(new THREE.Vector3(0, 0.9, 0)), new THREE.Vector3(1.8, 2.2, 3.4), 1.0); const ar = av.a.room || 'lp'; if (ar !== room) { room = ar; ['lp', 'tr', 'meme'].forEach((k) => $('r-' + k).classList.toggle('on', ar === k)); $('roomtag').textContent = { lp: 'Lantai LP', tr: 'Ruang Trading', meme: 'Ruang Trading Meme' }[ar]; } }
+  if (zoom) { const av = avatars[id]; follow = id; flyTo(av.root.position.clone().add(new THREE.Vector3(0, 0.9, 0)), new THREE.Vector3(1.8, 2.2, 3.4), 1.0); const ar = av.a.room || 'lp'; if (ar !== room) { room = ar; ['lp', 'tr', 'meme'].forEach((k) => { const b = $('r-' + k); b && b.classList.toggle('on', ar === k); }); $('roomtag').textContent = { lp: 'Lantai LP', tr: 'Ruang Trading', meme: 'Ruang Trading Meme' }[ar]; } }
 }
 $('reset').onclick = () => { follow = null; goRoom(room); };
-$('r-lp').onclick = () => { follow = null; goRoom('lp'); };
-$('r-tr').onclick = () => { follow = null; goRoom('tr'); if (selected !== 'dompet') select('dompet', false); };
-$('r-meme').onclick = () => { follow = null; goRoom('meme'); if (!selected.startsWith('m_')) select('m_acc', false); };
+if ($('r-lp')) $('r-lp').onclick = () => { follow = null; goRoom('lp'); };
+if ($('r-tr')) $('r-tr').onclick = () => { follow = null; goRoom('tr'); if (selected !== 'dompet') select('dompet', false); };
+if ($('r-meme')) $('r-meme').onclick = () => { follow = null; goRoom('meme'); if (!selected.startsWith('m_')) select('m_acc', false); };
 controls.addEventListener('start', () => { follow = null; camTween = null; });
 
 /* ---------- UI ---------- */
 function renderChips() {
-  $('chips').innerHTML = AGENTS.map((a) => { const s = ST[a.id]; const dc = !s ? '#555' : s.act === 'sleep' || s.act === 'worry' ? '#ffbf3c' : s.act === 'idle' ? '#8d92b8' : '#3ee6a0';
+  $('chips').innerHTML = AGENTS.filter((a) => !MEME || a.room === 'meme').map((a) => { const s = ST[a.id]; const dc = !s ? '#555' : s.act === 'sleep' || s.act === 'worry' ? '#ffbf3c' : s.act === 'idle' ? '#8d92b8' : '#3ee6a0';
     return `<button class="chip ${selected === a.id ? 'on' : ''}" style="--c:${a.color}" data-id="${a.id}"><span class="av" style="background:${a.color}">${a.name[0]}</span>${a.role.split(' /')[0]}<span class="sd" style="background:${dc}"></span></button>`; }).join('');
   $('chips').querySelectorAll('.chip').forEach((b) => b.onclick = () => { const id = b.dataset.id; const a = AGENTS.find((x) => x.id === id); if ((a.room || 'lp') !== room) goRoom(a.room || 'lp', 0.6); select(id, true); });
 }
@@ -531,6 +533,7 @@ function renderMeme() {
 }
 function renderLists() {
   renderMeme();
+  if (MEME) { const M = D.meme || {}, mp = M.paper || {}; $('s-pos').textContent = M.available ? (M.open || []).length : '–'; $('s-usd').textContent = M.available ? nf(mp.balance) + ' SOL' : '–'; $('s-sol').textContent = M.available ? sgn(mp.dayPnl, 3) : '–'; $('s-sol').className = cls(mp.dayPnl); $('s-pnl').textContent = M.available ? (mp.wr ?? '–') + '%' : '–'; return; }
   const tr = (D.trades || []).slice(-6).reverse();
   $('trades').innerHTML = tr.length ? tr.map((t) => `<div class="tr"><b class="mut">#${t.n}</b><div>${t.pool}<small>${t.opened} → ${t.closed} · ${t.reason}</small></div><b class="${cls(t.result)}">${t.result == null ? '–' : (t.approx ? '~' : '') + sgn(t.result) + ' SOL'}</b></div>`).join('') : '<div class="mut">Belum ada trade.</div>';
   $('routines').innerHTML = (D.routines || []).map((r) => `<div class="rt"><span>${r.name}</span><span class="tag ${r.status === 'aktif' ? 'on' : 'off'}">${r.status}</span></div>`).join('') || '<div class="mut">–</div>';
@@ -548,9 +551,9 @@ function updatePill() {
 const REFRESH = 30000;
 async function load() {
   try {
-    const r = await fetch('data.json?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw new Error(r.status);
+    const r = await fetch(DATA_URL + '?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw new Error(r.status);
     const d = await r.json(); prevD = D; D = d; applyState(); renderChips(); renderPanel(); renderLists(); drawBoard(); updatePill();
-    $('foot').textContent = `Data diperbarui otomatis tiap ±1 menit dari dompet Syra (halaman cek tiap ${REFRESH / 1000} dtk). Terakhir: ${new Date(D.ts * 1000).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB. Tanpa token atau kunci rahasia.`;
+    if (MEME) $('foot').textContent = `Data hp1b (PAPER, simulasi) dari Nobitradememe, diperbarui tiap ±1 menit (halaman cek tiap ${REFRESH / 1000} dtk). Terakhir: ${new Date(D.ts * 1000).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB. Tanpa alamat dompet, token, atau kunci.`; else $('foot').textContent = `Data diperbarui otomatis tiap ±1 menit dari dompet Syra (halaman cek tiap ${REFRESH / 1000} dtk). Terakhir: ${new Date(D.ts * 1000).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB. Tanpa token atau kunci rahasia.`;
   } catch (e) { $('pill').className = 'pill err'; $('pillt').textContent = 'Gagal memuat data'; }
 }
 load(); setInterval(load, REFRESH); setInterval(updatePill, 5000);
@@ -618,7 +621,7 @@ function tick() {
 }
 function resize() { const r = canvas.parentElement.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
 new ResizeObserver(resize).observe(canvas.parentElement); resize();
-camera.position.copy(ROOMS.lp.t.clone().add(fitOffset(ROOMS.lp.off)).multiplyScalar(1.25)); controls.target.copy(ROOMS.lp.t); goRoom('lp', 1.6);
+camera.position.copy(ROOMS[room].t.clone().add(fitOffset(ROOMS[room].off)).multiplyScalar(1.25)); controls.target.copy(ROOMS[room].t); goRoom(room, 1.6);
 drawWall(0); drawBoard(); renderChips();
 renderer.setAnimationLoop(tick);
 setTimeout(() => { $('load').style.opacity = 0; setTimeout(() => $('load').remove(), 700); }, 400);
