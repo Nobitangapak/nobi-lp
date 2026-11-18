@@ -22,6 +22,10 @@ const AGENTS = [
   { id: 'tpsl', name: 'Aoi', role: 'Take Profit / Stop Loss', color: '#a46bff', hair: '#6a3fd1', eye: '#9b5cff', style: 'pony', desk: [-5, 1.4] },
   { id: 'laporan', name: 'Miko', role: 'Laporan', color: '#3ee6a0', hair: '#7a4a2b', eye: '#2bb67a', style: 'bob', desk: [-2, 1.4] },
   { id: 'dompet', name: 'Rin', role: 'Dompet', color: '#ffd84a', hair: '#ffe28a', eye: '#e0a100', style: 'buns', desk: [7, -2.2], room: 'tr' },
+  { id: 'm_scan', name: 'Sora', role: 'Pemindai Meme', color: '#ff8a3d', hair: '#2b1d3a', eye: '#ff6a00', style: 'spiky', headset: true, desk: [13, -2.2], room: 'meme' },
+  { id: 'm_buy', name: 'Taro', role: 'Sniper Beli', color: '#ff4f6d', hair: '#e8e8f0', eye: '#ff2d55', style: 'spiky2', desk: [16, -2.2], room: 'meme' },
+  { id: 'm_exit', name: 'Nana', role: 'Penjaga Exit', color: '#c6ff4a', hair: '#3b8f4a', eye: '#5fd400', style: 'pony', desk: [13, 1.4], room: 'meme' },
+  { id: 'm_acc', name: 'Kiko', role: 'Akuntan Meme', color: '#ffa8e0', hair: '#ff6fb5', eye: '#ff3da6', style: 'twin', glasses: true, desk: [16, 1.4], room: 'meme' },
 ];
 
 /* ---------- state ---------- */
@@ -42,7 +46,7 @@ const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = false;
 controls.minDistance = 4; controls.maxDistance = 38; controls.maxPolarAngle = 1.32; controls.minPolarAngle = 0.35;
 
-const ROOMS = { lp: { t: new THREE.Vector3(-4.6, 0.3, 0.2), off: new THREE.Vector3(6.5, 9.5, 11.5) }, tr: { t: new THREE.Vector3(7.0, 0.3, -1.4), off: new THREE.Vector3(4.5, 7.5, 9) } };
+const ROOMS = { lp: { t: new THREE.Vector3(-4.6, 0.3, 0.2), off: new THREE.Vector3(6.5, 9.5, 11.5) }, tr: { t: new THREE.Vector3(7.0, 0.3, -1.4), off: new THREE.Vector3(4.5, 7.5, 9) }, meme: { t: new THREE.Vector3(14.9, 0.3, -1.0), off: new THREE.Vector3(3.5, 8.5, 11) } };
 let camTween = null;
 function flyTo(target, offset, dur = 1.1) {
   camTween = { t0: performance.now(), dur: dur * 1000, fromT: controls.target.clone(), fromP: camera.position.clone(), toT: target.clone(), toP: target.clone().add(offset) };
@@ -50,13 +54,13 @@ function flyTo(target, offset, dur = 1.1) {
 function fitOffset(off) { // push camera back on narrow screens
   const a = camera.aspect; const k = a < 0.75 ? 1.3 : a < 1 ? 1.12 : 0.9; return off.clone().multiplyScalar(k);
 }
-function goRoom(r, dur) { room = r; flyTo(ROOMS[r].t, fitOffset(ROOMS[r].off), dur); $('r-lp').classList.toggle('on', r === 'lp'); $('r-tr').classList.toggle('on', r === 'tr'); $('roomtag').textContent = r === 'lp' ? 'Lantai LP' : 'Ruang Trading'; }
+function goRoom(r, dur) { room = r; flyTo(ROOMS[r].t, fitOffset(ROOMS[r].off), dur); ['lp', 'tr', 'meme'].forEach((k) => $('r-' + k).classList.toggle('on', r === k)); $('roomtag').textContent = { lp: 'Lantai LP', tr: 'Ruang Trading', meme: 'Ruang Trading Meme' }[r]; }
 
 /* ---------- lights ---------- */
 scene.add(new THREE.HemisphereLight('#c4cbff', '#3a2a50', 1.9));
 const sun = new THREE.DirectionalLight('#fff1e0', 2.0);
-sun.position.set(8, 16, 10); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
-Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 10, bottom: -10, near: 1, far: 50 }); sun.shadow.bias = -0.0008;
+sun.position.set(12, 16, 10); sun.target.position.set(4, 0, 0); scene.add(sun.target); sun.castShadow = true; sun.shadow.mapSize.set(1536, 1536);
+Object.assign(sun.shadow.camera, { left: -17, right: 17, top: 11, bottom: -11, near: 1, far: 50 }); sun.shadow.bias = -0.0008;
 scene.add(sun);
 const pl1 = new THREE.PointLight('#ff5fa8', 14, 12, 1.6); pl1.position.set(-9, 3, -5); scene.add(pl1);
 const pl2 = new THREE.PointLight('#38d6ff', 14, 12, 1.6); pl2.position.set(7, 3, -5); scene.add(pl2);
@@ -155,6 +159,34 @@ function makeDesk(a) {
   const ch = new THREE.Group(); ch.position.set(0.1, 0, -0.95); const cm = toon('#2e3156');
   ch.add(box(0.5, 0.08, 0.5, cm, 0, 0.42, 0)); ch.add(box(0.5, 0.55, 0.07, cm, 0, 0.72, -0.25)); ch.add(box(0.05, 0.4, 0.05, leg, 0, 0.2, 0)); g.add(ch);
   office.add(g); return g;
+}
+// ---- Ruang Trading Meme ----
+const memeScreen = canvasTex(768, 384);
+{
+  const ft = canvasTex(256, 256); const g = ft.g; g.fillStyle = '#1a1626'; g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { g.fillStyle = (i + j) % 2 ? '#211a30' : '#1a1528'; g.fillRect(i * 64, j * 64, 64, 64); }
+  g.strokeStyle = '#3a2a4a'; g.lineWidth = 2; for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 64, 0); g.lineTo(i * 64, 256); g.stroke(); g.beginPath(); g.moveTo(0, i * 64); g.lineTo(256, i * 64); g.stroke(); }
+  ft.t.wrapS = ft.t.wrapT = THREE.RepeatWrapping; ft.t.repeat.set(4, 6);
+  const fl = new THREE.Mesh(new THREE.BoxGeometry(8, 0.4, 12.4), [std('#2a2238'), std('#2a2238'), std('#1a1626', 0.6, 0.1, { map: ft.t }), std('#2a2238'), std('#33284a'), std('#2a2238')]);
+  fl.position.set(14.3, -0.2, 0); fl.receiveShadow = true; office.add(fl);
+  office.add(box(8, 3.4, 0.25, std('#1d1830', 0.85), 14.3, 1.7, -6.1));
+  office.add(box(0.25, 3.4, 12.4, std('#1d1830', 0.85), 18.4, 1.7, 0));
+  office.add(box(7.8, 0.06, 0.06, new THREE.MeshBasicMaterial({ color: '#ff8a3d' }), 14.3, 3.3, -5.95));
+  office.add(box(0.06, 0.06, 12, new THREE.MeshBasicMaterial({ color: '#c6ff4a' }), 18.25, 3.3, 0));
+  const glass2 = new THREE.MeshPhysicalMaterial({ color: '#ffc89f', transparent: true, opacity: 0.12, roughness: 0.05, side: THREE.DoubleSide });
+  const a1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.6, 4.9), glass2); a1.position.set(10.4, 1.3, -3.65); office.add(a1);
+  const a2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.6, 6.1), glass2); a2.position.set(10.4, 1.3, 3.15); office.add(a2);
+  office.add(box(0.1, 0.08, 12, std('#6e4a3a'), 10.4, 2.62, 0));
+  const st = canvasTex(1024, 128); st.g.font = '900 74px system-ui'; st.g.textAlign = 'center'; st.g.textBaseline = 'middle';
+  const sg = st.g.createLinearGradient(200, 0, 820, 0); sg.addColorStop(0, '#ff8a3d'); sg.addColorStop(1, '#c6ff4a'); st.g.fillStyle = sg; st.g.shadowColor = '#ff8a3d'; st.g.shadowBlur = 24; st.g.fillText('MEME TRADING DESK', 512, 66);
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.52), new THREE.MeshBasicMaterial({ map: st.t, transparent: true })); sign.position.set(14.5, 3.0, -5.96); office.add(sign);
+  office.add(box(4.4, 2.1, 0.12, std('#101225', 0.3, 0.4), 14.5, 1.75, -5.9));
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.95), new THREE.MeshBasicMaterial({ map: memeScreen.t, toneMapped: false })); m.position.set(14.5, 1.75, -5.83); office.add(m);
+  // beanbags + rocket lamp
+  [[11.6, 4.4, '#ff8a3d'], [12.8, 4.9, '#c6ff4a']].forEach(([x, z, c]) => { const b = sh(new THREE.Mesh(new THREE.SphereGeometry(0.55, 20, 14), toon(c))); b.scale.set(1, 0.6, 1); b.position.set(x, 0.3, z); office.add(b); });
+  const rk = new THREE.Group(); rk.position.set(17.6, 0, 5.2); rk.add(sh(new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.9, 16), toon('#f2efe6')))).position.y = 0.6; const nose = sh(new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.4, 16), toon('#ff4f6d'))); nose.position.y = 1.25; rk.add(nose); office.add(rk);
+  const pl4 = new THREE.PointLight('#ff8a3d', 14, 12, 1.6); pl4.position.set(14.5, 3, -5); scene.add(pl4);
+  plant(17.8, -5.4); plant(10.9, 5.6, 0.9);
 }
 AGENTS.forEach(makeDesk);
 // big wall screen (Pantau)
@@ -286,9 +318,12 @@ function buildAvatar(a) {
 const AISLE = -0.6;
 const V = (x, z) => new THREE.Vector3(x, 0, z);
 function spotOf(a) { const [x, z] = a.desk; return V(x + 0.1, z - 0.95); }
-function viaOf(a) { const s = spotOf(a); if (s.z < AISLE - 1) { const col = a.room === 'tr' ? 8.9 : s.x + 1.4; return [V(col, s.z), V(col, AISLE)]; } return [V(s.x, AISLE)]; }
+function viaOf(a) { const s = spotOf(a); if (s.z < AISLE - 1) { const col = a.room === 'tr' ? 8.9 : a.room === 'meme' ? (s.x < 14.5 ? 11.2 : 17.6) : s.x + 1.4; return [V(col, s.z), V(col, AISLE)]; } return [V(s.x, AISLE)]; }
 const POI = {
-  screen: { pos: V(-5, -4.7), via: [V(-3.5, -4.7), V(-3.5, AISLE)], face: Math.PI },
+  screen: { pos: V(-5, -4.7), via: [V(-3.5, -4.7), V(-3.5, AISLE)], face: Math.PI, isScreen: true },
+  memeScreen: { pos: V(14.5, -4.7), via: [V(11.2, -4.7), V(11.2, AISLE)], face: Math.PI, isScreen: true },
+  beanbag: { pos: V(12.2, 3.6), via: [V(12.2, AISLE)], face: 0 },
+  rocket: { pos: V(17.0, 4.4), via: [V(17.0, AISLE)], face: Math.PI / 2 },
   coffee: { pos: V(1.6, -4.6), via: [V(1.6, AISLE)], face: Math.PI },
   window: { pos: V(-9.6, 4.6), via: [V(-9.6, AISLE)], face: -Math.PI / 2 },
   cooler: { pos: V(-9.5, 3.0), via: [V(-9.5, AISLE)], face: -Math.PI / 2 },
@@ -330,6 +365,15 @@ function derive() {
   st.laporan = rep === 'aktif' ? { act: 'type', s: 'Laporan per jam aktif', wander: true } : { act: 'idle', s: 'Laporan dijeda', wander: true };
   const tot = D ? D.totalUsd : null;
   st.dompet = noFunds ? { act: 'worry', s: `Saldo ${usd(tot)} · 0 SOL`, emo: 'sweat', expr: 'sad', wander: true } : { act: 'type', s: `Saldo ${usd(tot)}`, wander: true };
+  const M = D && D.meme;
+  if (!M || !M.available) { ['m_scan', 'm_buy', 'm_exit', 'm_acc'].forEach((k) => st[k] = { act: 'sleep', s: 'Belum ada data', emo: 'zzz' }); }
+  else {
+    const mo = (M.open || []).length, mp = M.paper || {}, mr = M.rules || {};
+    st.m_scan = M.alive ? { act: 'type', s: `Memindai ${nf(M.scanner?.universe, 0)} token` } : { act: 'sleep', s: 'Bot pemindai mati', emo: 'zzz' };
+    st.m_buy = mo ? { act: 'type', s: `${mo} posisi terbuka`, expr: 'happy' } : { act: 'idle', s: 'Menunggu sinyal lolos', wander: true };
+    st.m_exit = mo ? { act: 'watch', s: 'Jaga TP/SL/stall', emo: 'eye', poi: POI.memeScreen } : { act: 'idle', s: `TP +${Math.round((mr.tp_pct || 0) * 100)}% · SL -${Math.round((mr.sl_pct || 0) * 100)}%`, wander: true };
+    st.m_acc = (mp.dayPnl || 0) < 0 ? { act: 'worry', s: `Hari ini ${sgn(mp.dayPnl, 3)} SOL (paper)`, emo: 'sweat', expr: 'sad', wander: true } : (mp.dayPnl || 0) > 0 ? { act: 'type', s: `Hari ini ${sgn(mp.dayPnl, 3)} SOL (paper)`, expr: 'happy', wander: true } : { act: 'type', s: 'PnL hari ini 0 SOL', wander: true };
+  }
   if (has && p && p.tp != null && p.pnlPct != null && p.pnlPct >= p.tp) { st.laporan = { act: 'celebrate', s: 'Take profit tercapai!', emo: 'star', expr: 'happy' }; st.tpsl = { act: 'celebrate', s: 'Take profit!', emo: 'star', expr: 'happy' }; }
   return st;
 }
@@ -340,11 +384,13 @@ function applyState() {
     const av = avatars[id]; const s = ST[id]; if (!s) continue;
     av.activity = s.act; av.status = s.s; av.wanderOk = !!s.wander; av.baseExpr = s.expr || 'normal';
     av.emo.visible = !!s.emo; if (s.emo) av.emo.material.map = EMO[s.emo];
-    if (s.act === 'watch') routeTo(av, POI.screen);
-    else if (av.dest === POI.screen && s.act !== 'watch') routeTo(av, av.home);
+    if (s.act === 'watch') routeTo(av, s.poi || POI.screen);
+    else if (av.dest && av.dest.isScreen && s.act !== 'watch') routeTo(av, av.home);
     if (s.act === 'celebrate') { av.celebrateUntil = performance.now() + 9000; burst(av.root.position); }
     updateTag(av);
   }
+  { const a0 = prevD && prevD.meme && (prevD.meme.trades || [])[0], b0 = D.meme && (D.meme.trades || [])[0];
+    if (prevD && b0 && (!a0 || a0.closed !== b0.closed) && b0.pnlSol > 0) { ['m_acc', 'm_buy'].forEach((k) => { const av = avatars[k]; av.celebrateUntil = performance.now() + 9000; av.emo.visible = true; av.emo.material.map = EMO.star; burst(av.root.position); }); } }
   // TP transition detection: position closed and newest trade is take-profit
   if (prevD && (prevD.positions || []).length && !(D.positions || []).length) {
     const last = (D.trades || []).filter((t) => t.result != null).slice(-1)[0];
@@ -375,6 +421,14 @@ function screenLines(id) {
     case 'pantau': return p ? [[p.pool], ['PnL ' + sgn(p.pnlPct, 2) + '%', p.pnlPct >= 0 ? '#3ee6a0' : '#ff5f6d'], [p.inRange === false ? 'Keluar range' : 'Dalam range', '#9aa0d0']] : [['Tidak ada posisi'], ['Menunggu posisi baru', '#9aa0d0']];
     case 'tpsl': return [['TP +' + (R.tp ?? 9) + '%', '#3ee6a0'], ['SL ' + (R.sl ?? -3) + '%', '#ff5f6d'], [p ? 'PnL ' + sgn(p.pnlPct, 2) + '%' : 'Tidak ada posisi', '#9aa0d0']];
     case 'laporan': return [['Hari ini: ' + sgn(D.pnlDay?.realizedSol) + ' SOL'], ['30 hari: ' + sgn(D.pnlMonth?.realizedSol) + ' SOL', cls(D.pnlMonth?.realizedSol) === 'neg' ? '#ff5f6d' : '#3ee6a0'], ['Ditutup 30h: ' + (D.pnlMonth?.closedCount ?? '–'), '#9aa0d0']];
+    case 'm_scan': case 'm_buy': case 'm_exit': case 'm_acc': {
+      const M = D.meme; if (!M || !M.available) return [['Belum ada data'], ['Nobitradememe', '#9aa0d0']];
+      const mp = M.paper || {}, mr = M.rules || {};
+      if (id === 'm_scan') return [['Scan: ' + nf(M.scanner?.scans, 0)], ['Universe ' + nf(M.scanner?.universe, 0), '#9aa0d0'], [M.alive ? 'Bot hidup' : 'Bot mati', M.alive ? '#3ee6a0' : '#ff5f6d']];
+      if (id === 'm_buy') return [['Terbuka: ' + (M.open || []).length + '/' + (M.maxOpen ?? '–')], ['Ukuran ' + nf(M.sizeSol) + ' SOL', '#9aa0d0'], ['Mode PAPER', '#ffbf3c']];
+      if (id === 'm_exit') return [['TP +' + Math.round((mr.tp_pct || 0) * 100) + '%', '#3ee6a0'], ['SL -' + Math.round((mr.sl_pct || 0) * 100) + '%', '#ff5f6d'], ['Stall ' + (mr.stall_sec ?? '–') + ' dtk', '#9aa0d0']];
+      return [['Saldo ' + nf(mp.balance) + ' SOL'], ['Hari ini ' + sgn(mp.dayPnl, 3), (mp.dayPnl || 0) < 0 ? '#ff5f6d' : '#3ee6a0'], ['Menang ' + (mp.wins ?? 0) + '/' + (mp.closed ?? 0), '#9aa0d0']];
+    }
     case 'dompet': return [['Total ' + usd(D.totalUsd)], ['SOL ' + nf(D.walletSol) + ' · USDC ' + nf(D.walletUsdc, 2), '#9aa0d0'], ...(D.tokens || []).slice(0, 2).map((t) => [t.symbol + ' ' + nf(t.amount, 0), '#ffd84a'])];
   }
   return [];
@@ -391,6 +445,20 @@ function drawWall(t) {
     g.fillStyle = '#aab0dd'; g.font = '600 24px system-ui'; g.fillText(`Modal ${nf(p.deposit)} SOL · Nilai ${nf(p.value)} SOL · ${p.inRange === false ? 'keluar range' : 'dalam range'}`, 28, 262);
     const sl = p.sl ?? -3, tp = p.tp ?? 9; const x0 = 28, x1 = W - 28, y = 310; g.fillStyle = '#20244a'; rr(g, x0, y, x1 - x0, 18, 9); g.fill(); const f = Math.max(0, Math.min(1, ((p.pnlPct || 0) - sl) / (tp - sl))); g.fillStyle = (p.pnlPct || 0) >= 0 ? '#3ee6a0' : '#ff5f6d'; rr(g, x0, y, (x1 - x0) * f, 18, 9); g.fill(); g.fillStyle = '#aab0dd'; g.font = '600 20px system-ui'; g.fillText('SL ' + sl + '%', x0, y + 48); g.fillText('TP +' + tp + '%', x1 - 90, y + 48); }
   wall.t.needsUpdate = true;
+}
+function drawMeme(t) {
+  const g = memeScreen.g; const W = 768, H = 384; const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#2a1208'); bg.addColorStop(1, '#14231a'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#ff8a3d'; g.font = '800 30px system-ui'; g.fillText('RADAR MEME · hp1b', 28, 50);
+  const M = D && D.meme;
+  if (!M || !M.available) { g.fillStyle = '#fff'; g.font = '800 46px system-ui'; g.fillText('Belum ada data', 28, 150); memeScreen.t.needsUpdate = true; return; }
+  g.fillStyle = '#ffbf3c'; rr(g, W - 200, 22, 172, 40, 20); g.fill(); g.fillStyle = '#1a1000'; g.font = '800 22px system-ui'; g.fillText('PAPER', W - 155, 50);
+  const mp = M.paper || {};
+  g.fillStyle = '#fff'; g.font = '900 50px system-ui'; g.fillText(nf(mp.balance) + ' SOL', 28, 120);
+  g.fillStyle = (mp.pnlSol || 0) < 0 ? '#ff5f6d' : '#3ee6a0'; g.font = '700 26px system-ui'; g.fillText('PnL ' + sgn(mp.pnlSol) + ' SOL · Menang ' + (mp.wins ?? 0) + '/' + (mp.closed ?? 0), 28, 160);
+  g.fillStyle = '#aab0dd'; g.font = '600 20px system-ui'; g.fillText('Token terbaru di radar:', 28, 202);
+  (M.feed || []).slice(0, 5).forEach((f, i) => { const y = 236 + i * 30; g.fillStyle = f.passed ? '#3ee6a0' : '#e7eaff'; g.font = '700 20px system-ui'; g.fillText(f.sym || '?', 28, y); g.fillStyle = '#9aa0d0'; g.font = '500 18px system-ui'; g.fillText(('$' + nf(f.mcapUsd, 0) + ' · ' + (f.verdict || '')).slice(0, 52), 170, y); });
+  const y = 26 + ((t / 25) % 330); g.fillStyle = 'rgba(255,140,60,.07)'; g.fillRect(0, y, W, 8);
+  memeScreen.t.needsUpdate = true;
 }
 function drawBoard() {
   const g = board.g; const W = 768, H = 384; const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#08243a'); bg.addColorStop(1, '#141038'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
@@ -413,11 +481,12 @@ canvas.addEventListener('pointerup', (e) => {
 let follow = null;
 function select(id, zoom) {
   selected = id; renderChips(); renderPanel(); Object.values(avatars).forEach(updateTag);
-  if (zoom) { const av = avatars[id]; follow = id; flyTo(av.root.position.clone().add(new THREE.Vector3(0, 0.9, 0)), new THREE.Vector3(1.8, 2.2, 3.4), 1.0); if (av.a.room === 'tr' && room !== 'tr') { room = 'tr'; } }
+  if (zoom) { const av = avatars[id]; follow = id; flyTo(av.root.position.clone().add(new THREE.Vector3(0, 0.9, 0)), new THREE.Vector3(1.8, 2.2, 3.4), 1.0); const ar = av.a.room || 'lp'; if (ar !== room) { room = ar; ['lp', 'tr', 'meme'].forEach((k) => $('r-' + k).classList.toggle('on', ar === k)); $('roomtag').textContent = { lp: 'Lantai LP', tr: 'Ruang Trading', meme: 'Ruang Trading Meme' }[ar]; } }
 }
 $('reset').onclick = () => { follow = null; goRoom(room); };
 $('r-lp').onclick = () => { follow = null; goRoom('lp'); };
 $('r-tr').onclick = () => { follow = null; goRoom('tr'); if (selected !== 'dompet') select('dompet', false); };
+$('r-meme').onclick = () => { follow = null; goRoom('meme'); if (!selected.startsWith('m_')) select('m_acc', false); };
 controls.addEventListener('start', () => { follow = null; camTween = null; });
 
 /* ---------- UI ---------- */
@@ -438,11 +507,30 @@ function renderPanel() {
     case 'pantau': body = p ? kv([['Pool', p.pool], ['Modal', nf(p.deposit) + ' SOL'], ['Nilai', nf(p.value) + ' SOL'], ['PnL', sgn(p.pnlSol) + ' SOL (' + sgn(p.pnlPct, 2) + '%)', cls(p.pnlPct)], ['Range', p.inRange === false ? 'Keluar range' : p.inRange ? 'Dalam range' : '–']]) : kv([['Posisi terbuka', 'Tidak ada'], ['Rutinitas pantau', rtStatus('pantau') || '–', 'mut']]); note = p ? 'Yuki berdiri di depan layar besar selama posisi terbuka.' : 'Tidak ada posisi, jadi Yuki santai berkeliling kantor. Saat posisi dibuka, Yuki akan berjalan ke layar besar.'; break;
     case 'tpsl': body = kv([['Take profit', '+' + (R.tp ?? 9) + '%', 'pos'], ['Stop loss', (R.sl ?? -3) + '%', 'neg'], ['PnL posisi sekarang', p ? sgn(p.pnlPct, 2) + '%' : 'Tidak ada posisi', p ? cls(p.pnlPct) : 'mut']]); note = 'Posisi ditutup otomatis saat menyentuh TP atau SL.'; break;
     case 'laporan': body = kv([['PnL hari ini (UTC)', sgn(D.pnlDay?.realizedSol) + ' SOL', cls(D.pnlDay?.realizedSol)], ['PnL 30 hari', sgn(D.pnlMonth?.realizedSol) + ' SOL', cls(D.pnlMonth?.realizedSol)], ['Ditutup 30 hari', D.pnlMonth?.closedCount ?? '–'], ['Menang (catatan trade)', `${D.wins} dari ${D.closed}`], ['Perubahan vs modal awal', sgn(D.changeSol) + ' SOL', cls(D.changeSol)]]); note = 'Miko merayakan dengan konfeti setiap kali posisi kena take profit.'; break;
+    case 'm_scan': case 'm_buy': case 'm_exit': case 'm_acc': {
+      const M = D.meme; if (!M || !M.available) { body = kv([['Data', 'Belum ada']]); note = 'Belum ada data trading meme dari Nobitradememe di box.'; break; }
+      const mp = M.paper || {}, mr = M.rules || {}, lv = M.live || {};
+      if (a.id === 'm_scan') { body = kv([['Status bot', M.alive ? 'Hidup' : 'Mati', M.alive ? 'pos' : 'neg'], ['Scan terakhir', M.scanner?.last || '–'], ['Total scan', nf(M.scanner?.scans, 0)], ['Token di universe', nf(M.scanner?.universe, 0)], ...(M.scanner?.topReasons || []).slice(0, 3).map((r) => ['Ditolak: ' + r.r, nf(r.n, 0)])]); note = 'Sora memindai token baru Pump.fun dan menolak yang tidak lolos filter.'; }
+      if (a.id === 'm_buy') { body = kv([['Posisi terbuka', (M.open || []).length + ' / ' + (M.maxOpen ?? '–')], ['Ukuran per trade (paper)', nf(M.sizeSol) + ' SOL'], ['Live trading', lv.enabled ? 'Aktif' : 'Belum aktif', lv.enabled ? 'pos' : 'mut'], ['Dompet live (on-chain)', nf(lv.walletSol) + ' SOL']]); note = 'Semua trade meme saat ini PAPER (simulasi), bukan uang sungguhan. Mode live belum dinyalakan.'; }
+      if (a.id === 'm_exit') { body = kv([['Take profit', '+' + Math.round((mr.tp_pct || 0) * 100) + '%', 'pos'], ['Stop loss', '-' + Math.round((mr.sl_pct || 0) * 100) + '%', 'neg'], ['Stall exit', (mr.stall_sec ?? '–') + ' dtk & ≤ ' + Math.round((mr.stall_g || 0) * 100) + '%'], ['Batas waktu', Math.round((mr.time_stop_sec || 0) / 60) + ' mnt'], ['Dev maks', (mr.onchain_dev_max_pct ?? '–') + '%'], ['Top10 maks', (mr.onchain_top10_max_pct ?? '–') + '%']]); note = (M.open || []).length ? 'Nana berdiri di depan radar selama ada posisi terbuka.' : 'Tidak ada posisi meme terbuka, Nana santai.'; }
+      if (a.id === 'm_acc') { body = kv([['Saldo paper', nf(mp.balance) + ' SOL'], ['Modal awal paper', nf(mp.startSol) + ' SOL'], ['PnL hari ini', sgn(mp.dayPnl) + ' SOL', cls(mp.dayPnl)], ['PnL total', sgn(mp.pnlSol) + ' SOL', cls(mp.pnlSol)], ['Win rate', (mp.wr ?? '–') + '% (' + (mp.wins ?? 0) + '/' + (mp.closed ?? 0) + ')']]); note = 'Angka dari buku besar paper hp1b milik Nobitradememe. Kiko merayakan saat ada trade menang.'; }
+      break;
+    }
     case 'dompet': body = kv([['Total nilai', usd(D.totalUsd)], ['SOL', nf(D.walletSol)], ['USDC', nf(D.walletUsdc, 2)], ...(D.tokens || []).map((t) => [t.symbol, nf(t.amount, 2) + (t.valueUsd != null ? ' (' + usd(t.valueUsd) + ')' : '')]), ['Modal awal', nf(D.startSol) + ' SOL'], ['Alamat', D.walletShort || '–']]); note = D.walletSol < 0.01 ? 'SOL 0, jadi token tidak bisa dijual dan LP tidak bisa dibuka sampai ada top-up untuk biaya.' : 'Saldo cukup untuk biaya transaksi.'; break;
   }
   $('panel').innerHTML = `<div class="ph"><div class="av" style="background:${a.color}">${a.name[0]}</div><div><h3>${a.name} · ${a.role}</h3><p>${ACT[s.act] || ''}</p></div></div><div class="badge"><span class="sd" style="width:7px;height:7px;border-radius:50%;background:${a.color}"></span>${s.s || ''}</div>${body}<div class="note">${note}</div>`;
 }
+function renderMeme() {
+  const M = D.meme; const el = $('meme');
+  if (!M || !M.available) { el.innerHTML = '<div class="mut">Belum ada data trading meme dari Nobitradememe.</div>'; return; }
+  const mp = M.paper || {}, lv = M.live || {};
+  const age = M.ts ? Math.round(Date.now() / 1000 - M.ts) : null;
+  el.innerHTML = `<div class="badge"><span class="sd" style="width:7px;height:7px;border-radius:50%;background:${M.alive ? '#3ee6a0' : '#ff5f6d'}"></span>Mode PAPER (simulasi) · bot ${M.alive ? 'hidup' : 'mati'}${age != null ? ' · ' + (age < 120 ? age + ' dtk' : Math.round(age / 60) + ' mnt') + ' lalu' : ''}</div>` +
+    kv([['Saldo paper', nf(mp.balance) + ' SOL'], ['PnL total', sgn(mp.pnlSol) + ' SOL', cls(mp.pnlSol)], ['PnL hari ini', sgn(mp.dayPnl) + ' SOL', cls(mp.dayPnl)], ['Win rate', (mp.wr ?? '–') + '% (' + (mp.wins ?? 0) + '/' + (mp.closed ?? 0) + ')'], ['Posisi terbuka', (M.open || []).length], ['Live trading', lv.enabled ? 'Aktif' : 'Belum aktif (dompet live ' + nf(lv.walletSol) + ' SOL)', lv.enabled ? 'pos' : 'mut']]) +
+    '<div style="margin-top:8px">' + ((M.trades || []).slice(0, 6).map((t) => `<div class="tr"><b class="mut">🪙</b><div>${t.sym}<small>${(t.opened || '').slice(5, 16)} → ${(t.closed || '').slice(11, 16)} · ${t.reason}</small></div><b class="${cls(t.pnlSol)}">${sgn(t.pnlSol)} SOL</b></div>`).join('') || '<div class="mut" style="padding:8px 2px">Belum ada trade meme yang ditutup.</div>') + '</div>';
+}
 function renderLists() {
+  renderMeme();
   const tr = (D.trades || []).slice(-6).reverse();
   $('trades').innerHTML = tr.length ? tr.map((t) => `<div class="tr"><b class="mut">#${t.n}</b><div>${t.pool}<small>${t.opened} → ${t.closed} · ${t.reason}</small></div><b class="${cls(t.result)}">${t.result == null ? '–' : (t.approx ? '~' : '') + sgn(t.result) + ' SOL'}</b></div>`).join('') : '<div class="mut">Belum ada trade.</div>';
   $('routines').innerHTML = (D.routines || []).map((r) => `<div class="rt"><span>${r.name}</span><span class="tag ${r.status === 'aktif' ? 'on' : 'off'}">${r.status}</span></div>`).join('') || '<div class="mut">–</div>';
@@ -470,7 +558,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) load
 
 /* ---------- animation ---------- */
 const clock = new THREE.Clock(); let lastScreen = 0;
-const wanderSpots = { lp: [POI.coffee, POI.window, POI.cooler], tr: [POI.sofa, POI.board, POI.coffee] };
+const wanderSpots = { lp: [POI.coffee, POI.window, POI.cooler], tr: [POI.sofa, POI.board, POI.coffee], meme: [POI.beanbag, POI.rocket, POI.memeScreen] };
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05); const now = performance.now(); const t = now / 1000;
   for (const id in avatars) {
@@ -479,22 +567,22 @@ function tick() {
     // wander scheduling
     if (av.mode !== 'walk' && av.wanderOk && !celebrating && now > av.nextWander) {
       av.nextWander = now + 14000 + Math.random() * 16000;
-      if (av.at === av.home) { const list = id === 'laporan' ? [POI.coffee, { pos: V(7.4, -3.2), via: [V(8.9, -3.2), V(8.9, AISLE)], face: Math.PI / 2 }] : id === 'dompet' ? wanderSpots.tr : wanderSpots.lp; routeTo(av, list[Math.floor(Math.random() * list.length)]); }
+      if (av.at === av.home) { const list = id === 'laporan' ? [POI.coffee, { pos: V(7.4, -3.2), via: [V(8.9, -3.2), V(8.9, AISLE)], face: Math.PI / 2 }] : id === 'dompet' ? wanderSpots.tr : av.a.room === 'meme' ? wanderSpots.meme : wanderSpots.lp; routeTo(av, list[Math.floor(Math.random() * list.length)]); }
       else routeTo(av, av.home);
     }
-    if (!av.wanderOk && av.mode !== 'walk' && av.at !== av.home && av.dest !== POI.screen) routeTo(av, av.home);
+    if (!av.wanderOk && av.mode !== 'walk' && av.at !== av.home && !(av.dest && av.dest.isScreen)) routeTo(av, av.home);
     // movement
     let walking = false;
     if (av.mode === 'walk' && av.path.length) {
       const tgt = av.path[0]; const d = tgt.clone().sub(root.position); d.y = 0; const dist = d.length(); const sp = 1.25 * dt;
-      if (dist < sp) { root.position.copy(tgt); av.path.shift(); if (!av.path.length) { av.mode = 'idle'; av.at = av.dest; av.facing = av.dest.face || 0; if (av.dest !== av.home && av.dest !== POI.screen) av.nextWander = now + 5000 + Math.random() * 5000; } }
+      if (dist < sp) { root.position.copy(tgt); av.path.shift(); if (!av.path.length) { av.mode = 'idle'; av.at = av.dest; av.facing = av.dest.face || 0; if (av.dest !== av.home && !av.dest.isScreen) av.nextWander = now + 5000 + Math.random() * 5000; } }
       else { root.position.addScaledVector(d.normalize(), sp); av.facing = Math.atan2(d.x, d.z); walking = true; }
     }
     // rotate smoothly
     let dr = av.facing - root.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); root.rotation.y += dr * Math.min(1, dt * 8);
     // poses
     const atHome = av.at === av.home && !walking;
-    const act = celebrating ? 'celebrate' : walking ? 'walk' : (av.activity === 'watch' && av.at === POI.screen) ? 'watch' : atHome ? av.activity : 'idle';
+    const act = celebrating ? 'celebrate' : walking ? 'walk' : (av.activity === 'watch' && av.at && av.at.isScreen) ? 'watch' : atHome ? av.activity : 'idle';
     let armL = 0.12, armR = -0.12, armXL = 0, armXR = 0, legA = 0, bob = Math.sin(av.phase * 2) * 0.015, headX = 0, headZ = 0, headY = 0, jump = 0;
     if (act === 'walk') { const s = Math.sin(av.phase * 9); legA = s * 0.6; armXL = -s * 0.6; armXR = s * 0.6; bob = Math.abs(Math.cos(av.phase * 9)) * 0.06; }
     else if (act === 'type') { armXL = -1.15 + Math.sin(av.phase * 22) * 0.12; armXR = -1.15 + Math.sin(av.phase * 22 + 1.7) * 0.12; armL = 0.35; armR = -0.35; headX = 0.18 + Math.sin(av.phase * 3) * 0.03; headY = -0.3; }
@@ -521,7 +609,7 @@ function tick() {
   conf.forEach((c, i) => { if (c.life > 0) { c.life -= dt; c.v.y -= 6 * dt; c.v.multiplyScalar(0.985); c.p.addScaledVector(c.v, dt); if (c.p.y < 0.02) { c.p.y = 0.02; c.v.set(0, 0, 0); } c.r.x += dt * 6; c.r.y += dt * 4; } else c.p.y = -10; dummy.position.copy(c.p); dummy.rotation.copy(c.r); dummy.updateMatrix(); confMesh.setMatrixAt(i, dummy.matrix); });
   confMesh.instanceMatrix.needsUpdate = true;
   // screens
-  if (now - lastScreen > 250) { lastScreen = now; AGENTS.forEach((a) => drawDesk(a.id, now)); drawWall(now); }
+  if (now - lastScreen > 250) { lastScreen = now; AGENTS.forEach((a) => drawDesk(a.id, now)); drawWall(now); drawMeme(now); }
   // camera
   if (camTween) { const k = Math.min(1, (now - camTween.t0) / camTween.dur); const e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; controls.target.lerpVectors(camTween.fromT, camTween.toT, e); camera.position.lerpVectors(camTween.fromP, camTween.toP, e); if (k >= 1) camTween = null; }
   else if (follow) { const av = avatars[follow]; const want = av.root.position.clone().add(new THREE.Vector3(0, 0.9, 0)); const delta = want.sub(controls.target).multiplyScalar(0.06); controls.target.add(delta); camera.position.add(delta); }
